@@ -7,7 +7,7 @@ if ($_SERVER["REQUEST_METHOD"] != "POST") {
     exit();
 }
 
-include 'database_connection.php';
+include 'config/database_connection.php';
 
 // Check if user came through proper forgot password flow
 if (!isset($_SESSION['reset_email'])) {

@@ -1,0 +1,201 @@
+.form-container {
+    background: white;
+    padding: 2rem;
+    width: 100%;
+    max-width: 450px;
+    margin: auto;
+}
+
+.form-container h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--dark);
+    font-weight: 600;
+    font-size: 1.5rem;
+    position: relative;
+}
+
+.form-container h2::after {
+    content: '';
+    display: block;
+    width: 50px;
+    height: 3px;
+    background: var(--primary);
+    margin: 0.8rem auto 0;
+    border-radius: 2px;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+    position: relative;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4A5568;
+    font-size: 0.875rem;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid #E2E8F0;
+    font-size: 0.9375rem;
+    transition: all 0.3s ease;
+    background-color: var(--secondary);
+    border-radius: 10px;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+    background-color: var(--light);
+}
+
+.address-type-options {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.address-type-option {
+    flex: 0.4;
+    position: relative;
+}
+
+.address-type-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.address-type-option label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 0.5rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 10px;
+    background-color: var(--secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    text-align: center;
+    height: 70%;
+}
+
+.address-type-option label i {
+    font-size: 1.25rem;
+    color: #718096;
+}
+
+.address-type-option input:checked+label {
+    border-color: var(--primary);
+    background-color: rgba(108, 99, 255, 0.05);
+    color: var(--primary);
+}
+
+.address-type-option input:checked+label i {
+    color: var(--primary);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-light);
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.save-btn {
+    width: 100%;
+    background: var(--primary);
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.3s;
+}
+
+.input-icon {
+    position: relative;
+}
+
+.input-icon i {
+    position: absolute;
+    right: 1rem;
+    top: 70%;
+    transform: translateY(-50%);
+    color: #A0AEC0;
+    font-size: 1rem;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 480px) {
+    body {
+        padding: 0;
+    }
+
+    .form-container {
+        padding: 1.5rem;
+        background: none;
+        width: 100%;
+        max-width: 450px;
+        margin: 0;
+        border-radius: 0;
+        border-top: none;
+    }
+
+    .form-container h2 {
+        font-size: 1.3rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .address-type-options {
+        gap: 0.5rem;
+    }
+
+    button {
+        padding: 0.9rem;
+    }
+}
+
+.arrow {
+    display: flex;
+    align-items: center;
+}
+
+#arroBtn {
+    width: 40px;
+    padding-bottom: 35px;
+    font-size: 1.2rem;
+}

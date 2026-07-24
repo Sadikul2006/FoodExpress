@@ -1,0 +1,35 @@
+@media (max-width: 768px) {
+    .container {
+        padding: 0px;
+    }
+
+    .order-actions {
+        padding: 20px;
+    }
+}
+.order-items {
+    padding: 10px;
+}
+.card {
+    border: 2px solid #ffd9b3;
+    margin: 15px;
+    border-radius: 8px;
+}
+
+.card h3 {
+    padding: 12px 15px;
+    font-size: 18px;
+    color: #b35000;
+    font-weight: 600;
+    background: #ffe1c4;
+}
+
+.card h3 i {
+    font-size: 1.2rem;
+    color: #b35000;
+}
+
+.instruction-box {
+    color: var(--gray);
+    padding: 10px 20px;
+}

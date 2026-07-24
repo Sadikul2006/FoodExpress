@@ -1,103 +1,118 @@
 <?php
 session_start();
-require 'database_connection.php';
+require '../config/database_connection.php';
 
 if (!isset($_SESSION['admin_id'])) {
     header("Location: admin_login_register.php");
     exit();
 }
 
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Validate and sanitize inputs
+    // Sanitize inputs
     $name = trim($_POST['name']);
     $description = trim($_POST['description']);
-    $price = floatval($_POST['price']);
-    $category = $_POST['category'];
-    $status = $_POST['status'];
+    $price = isset($_POST['price']) ? floatval($_POST['price']) : 0;
+    $discount = isset($_POST['discount']) ? floatval($_POST['discount']) : 0;
+    $category = trim($_POST['category']);
+    $status = trim($_POST['status']);
     $restaurant_id = $_SESSION['admin_id'];
-    
-    // File upload handling
+
+    // Calculate final price & old price
+    $old_price = $price;
+    $final_price = ($discount > 0) ? $price - ($price * ($discount / 100)) : $price;
+
+    // Image upload
     $image = '';
-    $uploadOk = 1;
-    
+    $uploadOk = true;
+
     if (isset($_FILES['image']) && $_FILES['image']['error'] == UPLOAD_ERR_OK) {
         $target_dir = "uploads/";
         if (!file_exists($target_dir)) {
             mkdir($target_dir, 0777, true);
         }
-        
+
         $file_name = basename($_FILES['image']['name']);
         $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-        $new_file_name = uniqid() . '.' . $file_extension;
+        $new_file_name = uniqid("IMG_", true) . '.' . $file_extension;
         $target_file = $target_dir . $new_file_name;
-        
-        // Check if image file is a actual image
+
+        // Validate image
         $check = getimagesize($_FILES['image']['tmp_name']);
         if ($check === false) {
-            $_SESSION['error'] = "File is not an image.";
-            $uploadOk = 0;
+            $_SESSION['error'] = "File is not a valid image.";
+            $uploadOk = false;
         }
-        
-        // Check file size (max 2MB)
-        if ($_FILES['image']['size'] > 2000000) {
-            $_SESSION['error'] = "Sorry, your file is too large (max 2MB).";
-            $uploadOk = 0;
+
+        // Max 2MB
+        if ($_FILES['image']['size'] > 2 * 1024 * 1024) {
+            $_SESSION['error'] = "Image too large (max 2MB).";
+            $uploadOk = false;
         }
-        
-        // Allow certain file formats
-        $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
-        if (!in_array($file_extension, $allowed_extensions)) {
-            $_SESSION['error'] = "Sorry, only JPG, JPEG, PNG & GIF files are allowed.";
-            $uploadOk = 0;
+
+        // Allowed types
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        if (!in_array($file_extension, $allowed)) {
+            $_SESSION['error'] = "Only JPG, JPEG, PNG, GIF & WEBP allowed.";
+            $uploadOk = false;
         }
-        
-        if ($uploadOk == 1) {
+
+        if ($uploadOk) {
             if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
                 $image = $target_file;
             } else {
-                $_SESSION['error'] = "Sorry, there was an error uploading your file.";
-                $uploadOk = 0;
+                $_SESSION['error'] = "Error uploading image.";
+                $uploadOk = false;
             }
         }
     } else {
-        $_SESSION['error'] = "Please select an image file.";
-        $uploadOk = 0;
+        $_SESSION['error'] = "Please select an image.";
+        $uploadOk = false;
     }
-    
-    // Validate required fields
-    if (empty($name) || empty($price) || $uploadOk == 0) {
+
+    if (empty($name) || empty($price) || !$uploadOk) {
         if (!isset($_SESSION['error'])) {
             $_SESSION['error'] = "All fields are required.";
         }
         header("Location: menu.php");
         exit();
     }
-    
-    // Insert into database
+
     try {
-        $stmt = $conn->prepare("INSERT INTO items (restaurant_id, name, description, price, category, status, image) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("issdsss",$restaurant_id, $name, $description, $price, $category, $status, $image);
-        
+        $stmt = $conn->prepare("
+            INSERT INTO items 
+            (restaurant_id, name, description, old_price, price, discount, category, status, image)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->bind_param(
+            "issddssss",
+            $restaurant_id,
+            $name,
+            $description,
+            $old_price,
+            $final_price,
+            $discount,
+            $category,
+            $status,
+            $image
+        );
+
         if ($stmt->execute()) {
             $_SESSION['success'] = "Menu item added successfully!";
-            header("Location: menu.php");
         } else {
-            $_SESSION['error'] = "Error adding menu item: " . $conn->error;
-            header("Location: menu.php");
+            $_SESSION['error'] = "Error adding item: " . $stmt->error;
         }
-        
+
         $stmt->close();
     } catch (Exception $e) {
         $_SESSION['error'] = "Database error: " . $e->getMessage();
-        header("Location: menu.php");
     }
-    
+
     $conn->close();
+    header("Location: menu.php");
     exit();
 } else {
-    // Not a POST request, redirect to form
     header("Location: menu.php");
     exit();
 }

@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'database_connection.php';
+include 'config/database_connection.php';
 
 function data_check($data) {
     $data = trim($data);
@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if (empty($name) || empty($email) || empty($password) || empty($confirm_password)) {
         $_SESSION['error'] = "All fields are required";
-        header("Location: dashboard.php");
+        header("Location: restaurant_menu.php");
         exit();
     }
 

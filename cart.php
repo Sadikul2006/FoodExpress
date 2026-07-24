@@ -1,16 +1,32 @@
 <?php
 session_start();
-include 'database_connection.php';
+include 'config/database_connection.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
-$restaurant_id = $_SESSION['restaurant_id'] ?? null;
+if (isset($_GET['restaurant_id'])) {
+    $_SESSION['restaurant_id'] = (int)$_GET['restaurant_id'];
+}
 
-// Initialize variables
+$restaurant_id = $_SESSION['restaurant_id'] ?? ($_GET['restaurant_id'] ?? null);
+$user_id = $_SESSION['user_id'] ?? null;
+
+
+$restaurant_name = "";
+$stmt_restaurant = $conn->prepare("SELECT restaurant_name FROM restaurant_info WHERE restaurant_id = ?");
+$stmt_restaurant->bind_param("i", $restaurant_id);
+$stmt_restaurant->execute();
+$result_restaurant = $stmt_restaurant->get_result();
+
+if ($row_restaurant = $result_restaurant->fetch_assoc()) {
+    $restaurant_name = $row_restaurant['restaurant_name'];
+}
+$stmt_restaurant->close();
+
+
 $delivery_fee = 0;
 $subtotal = 0;
 $total = 0;
@@ -24,9 +40,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         echo "Missing data.";
         exit;
     }
-
-    $user_id = $_SESSION['user_id'];
-    $restaurant_id = $_SESSION['restaurant_id'];
 
     $stmt = $conn->prepare("SELECT * FROM cart WHERE item_id = ? AND user_id = ? AND restaurant_id = ?");
     $stmt->bind_param("iii", $item_id, $user_id, $restaurant_id);
@@ -49,15 +62,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->close();
 }
 
-if (!$restaurant_id) {
-    die("Restaurant not selected.");
+if (!isset($_SESSION['restaurant_id'])) {
+    echo '
+    <div style="
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:80vh;
+        flex-direction:column;
+        color:#555;
+        text-align:center;
+        font-family:\'Segoe UI\',sans-serif;
+    ">
+        <i class="fa-solid fa-utensils" style="font-size:60px;color:#ff6b6b;margin-bottom:20px;"></i>
+        <h3>Please select a restaurant first</h3>
+        <p style="color:#777;">Go back to the home page and choose a restaurant to see its menu.</p>
+        <a href="restaurants.php" style="
+            margin-top:20px;
+            background:#ff6b6b;
+            color:white;
+            padding:10px 20px;
+            border-radius:8px;
+            text-decoration:none;
+            font-weight:600;
+            transition:background 0.2s;
+        ">Go to Restaurants</a>
+    </div>
+    ';
 }
 
-$fee_sql = "SELECT value FROM settings WHERE name = 'delivery_fee' LIMIT 1";
-$fee_result = $conn->query($fee_sql);
-if ($fee_result && $fee_result->num_rows > 0) {
-    $delivery_fee = (float)$fee_result->fetch_assoc()['value'];
-}
+$settings_sql = "SELECT delivery_fee, min_order_amount FROM restaurant_settings WHERE restaurant_id = ?";
+$stmt2 = $conn->prepare($settings_sql);
+$stmt2->bind_param("i", $_SESSION['restaurant_id']);
+$stmt2->execute();
+$settings_result = $stmt2->get_result();
+$settings = $settings_result->fetch_assoc();
+$stmt2->close();
+
+$delivery_fee = $settings['delivery_fee'] ?? 0;
+$min_order_amount = $settings['min_order_amount'] ?? 0;
+
 
 // Get cart items for display
 if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
@@ -99,11 +143,17 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Cart</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <link rel="stylesheet" href="app_style/cart.css">
+    <link rel="stylesheet" href="assets/css/cart.css">
 </head>
 
 <body>
-    <?php include 'navber.php' ?>
+    <div class="nav">
+        <a href="restaurant_menu.php" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h3>Your Cart</h3>
+        <p id="restaurant_name"><i class="fa-solid fa-utensils"></i><?php echo htmlspecialchars($restaurant_name ?: "Restaurant"); ?></p>
+    </div>
 
     <div class="container">
         <!-- <h1 class="title">Your Shopping Cart</h1> -->
@@ -153,16 +203,19 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
                         <div class="empty-cart">
                             <i class="fas fa-shopping-cart" style="font-size: 50px; color: #ccc; margin-bottom: 20px;"></i>
                             <p>Your cart is empty</p>
-                            <a href="dashboard.php" class="continue-shopping">Continue Shopping</a>
+                            <a href="restaurant_menu.php" id="continue-shopping" class="continue-shopping">Add Items</a>
                         </div>';
                     }
                 }
                 ?>
 
                 <?php if ($cart_result && $cart_result->num_rows > 0): ?>
-                    <div>
-                        <a href="dashboard.php" class="continue-shopping">Continue Shopping</a>
+                    <div class="card">
+                        <h3 style="margin-top:0">Special instructions</h3>
+                        <textarea id="instructions" rows="4" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(15,23,42,0.06)" placeholder="Add notes for the restaurant (e.g., no onions, extra spicy)"></textarea>
+                    </div>
 
+                    <div>
                         <?php
                         $user_id = $_SESSION['user_id'];
                         $sql = "SELECT * FROM address WHERE user_id = $user_id AND is_default = 1 LIMIT 1";
@@ -185,48 +238,55 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
                             </div>
                         <?php
                         } else {
-                            echo "<p>No default address found. <a href='user_info.php'>Add an address</a></p>";
+                            echo '<a href="address.php">
+                                    <div class="add-address">
+                                        <i class="fas fa-plus"></i>
+                                        <span>Add New Address</span>
+                                    </div>
+                                </a>';
                         }
                         ?>
                     </div>
                 <?php endif; ?>
+            </div>
 
 
-                <?php if ($cart_result && $cart_result->num_rows > 0): ?>
-                    <div class="card">
-                        <h3 style="margin-top:0">Special instructions</h3>
-                        <textarea id="instructions" rows="4" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(15,23,42,0.06)" placeholder="Add notes for the restaurant (e.g., no onions, extra spicy)"></textarea>
+            <?php if ($cart_result && $cart_result->num_rows > 0): ?>
+                <div class="cart-summary" id="cart-summary">
+                    <h3 class="summary-title">Order Summary</h3>
+                    <div class="coupon-row">
+                        <input id="coupon" placeholder="Coupon code" />
+                        <button id="apply-coupon">Apply</button>
                     </div>
-            </div>
-            <div class="cart-summary" id="cart-summary">
-                <h3 class="summary-title">Order Summary</h3>
-                <div class="coupon-row">
-                    <input id="coupon" placeholder="Coupon code" />
-                    <button id="apply-coupon">Apply</button>
-                </div>
 
-                <div class="summary-row">
-                    <span>Subtotal:</span>
-                    <span id="subtotal">₹<?php echo number_format($subtotal, 2); ?></span>
+                    <div class="summary-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">₹<?php echo number_format($subtotal, 2); ?></span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Taxes:</span>
+                        <span id="tax">₹0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Delivery Fee:</span>
+                        <span id="delivery-fee">₹<?php echo number_format($delivery_fee, 2); ?></span>
+                    </div>
+                    <div class="summary-row total-row">
+                        <?php $total = $subtotal + $delivery_fee; ?>
+                        <span>Total:</span>
+                        <span id="total">₹<?php echo number_format($total, 2); ?></span>
+                    </div>
                 </div>
-                <div class="summary-row">
-                    <span>Taxes:</span>
-                    <span id="tax">₹0.00</span>
-                </div>
-                <div class="summary-row">
-                    <span>Delivery Fee:</span>
-                    <span id="delivery-fee">₹<?php echo number_format($delivery_fee, 2); ?></span>
-                </div>
-                <div class="summary-row total-row">
-                    <?php $total = $subtotal + $delivery_fee; ?>
-                    <span>Total:</span>
-                    <span id="total">₹<?php echo number_format($total, 2); ?></span>
-                </div>
-            </div>
         </div>
     </div>
-    <button type="button" class="checkout-btn" id="checkoutButton">Place Order</button>
 
+    <div id="cart_action_btn">
+        <a href="restaurant_menu.php" class="continue-shopping">Add Items</a>
+        <button type="button" class="checkout-btn" id="checkoutButton">
+            <p>Place Order</p>
+            <p id="total_amount">Total Amount : ₹<?php echo number_format($total, 2); ?></p>
+        </button>
+    </div>
 
     <!-- Confirm Order Modal -->
     <div class="modal-overlay" id="orderModalOverlay">
@@ -239,38 +299,38 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
                 <p>Are you sure you want to proceed with this order?</p>
                 <div class="summary">
                     <div class="info">
-                        <span class="name" id="total">Total Amount: ₹<?php echo number_format($total, 2); ?></span>
+                        <span class="name" id="total_text">Total Amount: ₹<?php echo number_format($total, 2); ?></span>
                         <span class="muted">Delivery to your address</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" id="cancelOrder">Cancel</button>
-                <form action="order.php" method="POST" id="confirmOrderForm">
-                    <input type="hidden" name="subtotal" id="formSubtotal" value="200.00">
-                    <input type="hidden" name="delivery_fee" id="formDeliveryFee" value="20.00">
-                    <input type="hidden" name="total" id="formTotal" value="220.00">
-                    <button type="submit" class="btn btn-success" id="confirmOrder">Confirm Order</button>
-                </form>
+                <input type="hidden" id="subtotal">
+                <input type="hidden" id="taxes">
+                <input type="hidden" id="delivery_fee">
+                <input type="hidden" id="total_val">
+                <button class="btn btn-success" id="confirmOrder">Confirm Order</button>
             </div>
         </div>
     </div>
 <?php endif; ?>
+<?php include 'includes/footer_nav.php' ?>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    let ajaxInProgress = false; // flag to block multiple requests
+    let ajaxInProgress = false;
 
     // Quantity update
     $(document).on("click", ".quantity-btn", function() {
-        if (ajaxInProgress) return; // block if previous request not finished
+        if (ajaxInProgress) return;
         ajaxInProgress = true;
 
         let itemId = $(this).data("id");
         let action = $(this).data("action");
 
         $.ajax({
-            url: "fetch_cart.php",
+            url: "ajax/fetch_cart.php",
             type: "POST",
             data: {
                 item_id: itemId,
@@ -289,7 +349,7 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
                 alert("Server error!");
             },
             complete: function() {
-                ajaxInProgress = false; // allow next request
+                ajaxInProgress = false;
             }
         });
     });
@@ -303,7 +363,7 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
         let itemId = $(this).data("id");
 
         $.ajax({
-            url: "fetch_cart.php",
+            url: "ajax/fetch_cart.php",
             type: "POST",
             data: {
                 action: "remove",
@@ -317,7 +377,7 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
 
                     // Navbar cart count update
                     $.ajax({
-                        url: "fetch_cart_count.php",
+                        url: "ajax/fetch_cart_count.php",
                         method: "GET",
                         success: function(count) {
                             $(".cart-badge").text(count);
@@ -347,61 +407,203 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
     // Update cart summary
     function updateCartSummary() {
         $.ajax({
-            url: "fetch_cart.php",
+            url: "ajax/fetch_cart.php",
             type: "GET",
             data: {
                 action: "get_summary"
             },
+            dataType: "json",
             success: function(data) {
-                $("#cart-summary").html(data);
+                let subtotal = parseFloat(data.subtotal).toFixed(2);
+                let taxes = parseFloat(data.taxes).toFixed(2);
+                let delivery_fee = parseFloat(data.delivery_fee).toFixed(2);
+                let total = parseFloat(data.total).toFixed(2);
+
+                // Update hidden fields
+                $("#subtotal").val(subtotal);
+                $("#taxes").val(taxes);
+                $("#delivery_fee").val(delivery_fee);
+                $("#total_val").val(total);
+
+                // Update displayed values
+                $("#subtotal").text("₹" + subtotal);
+                $("#tax").text("₹" + taxes);
+                $("#delivery-fee").text("₹" + delivery_fee);
+                $("#total").text("₹" + total);
+                $("#total_text").text("Total Amount: ₹" + total);
+
+                $("#total_amount").text("Total Amount: ₹" + total);
+            },
+            error: function(xhr, status, error) {
+                console.error("Summary update failed:", error);
             }
         });
     }
+
+    // Place order
+    function placeOrder() {
+        if (ajaxInProgress) return;
+        ajaxInProgress = true;
+
+        let subtotal = $("#subtotal").val();
+        let taxes = $("#taxes").val();
+        let delivery_fee = $("#delivery_fee").val();
+        let total = $("#total_val").val();
+        let instructions = $("#instructions").val();
+
+        $.ajax({
+            url: "order_history.php",
+            type: "POST",
+            dataType: "json",
+            data: {
+                subtotal: subtotal,
+                taxes: taxes,
+                delivery_fee: delivery_fee,
+                total: total,
+                instructions: instructions,
+                order: "confirm"
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    window.location.href = "order_history.php";
+                } else {
+                    alert('Failed to place order: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Order failed:", error);
+                alert("Failed to place order. Please try again.");
+            },
+            complete: function() {
+                ajaxInProgress = false;
+            }
+        });
+    }
+
+
 
     $(document).on("click", "#checkoutButton", function() {
+        if (ajaxInProgress) return;
+        ajaxInProgress = true;
+
+        // Update cart summary first
         $.ajax({
-            url: "fetch_cart.php",
-            type: "POST",
+            url: "ajax/fetch_cart.php",
+            type: "GET",
             data: {
-                checkOut: true
+                action: "get_summary"
             },
+            dataType: "json",
             success: function(data) {
-                $("#total").text("Total Amount: ₹" + data);
+                let subtotal = parseFloat(data.subtotal) || 0;
+                let taxes = parseFloat(data.taxes) || 0;
+                let delivery_fee = parseFloat(data.delivery_fee) || 0;
+                let total = parseFloat(data.total) || 0;
+
+                // Update hidden fields and display
+                $("#subtotal").val(subtotal.toFixed(2));
+                $("#taxes").val(taxes.toFixed(2));
+                $("#delivery_fee").val(delivery_fee.toFixed(2));
+                $("#total_val").val(total.toFixed(2));
+
+                $("#subtotal").text("₹" + subtotal.toFixed(2));
+                $("#tax").text("₹" + taxes.toFixed(2));
+                $("#delivery-fee").text("₹" + delivery_fee.toFixed(2));
+                $("#total").text("₹" + total.toFixed(2));
+                $("#total_text").text("Total Amount: ₹" + total.toFixed(2));
+
+                // **Check restaurant status first**
+                $.ajax({
+                    url: "ajax/fetch_cart.php",
+                    type: "POST",
+                    dataType: "json",
+                    data: {
+                        check_restaurant_status: true
+                    },
+                    success: function(response) {
+                        if (!response.status) {
+                            // Restaurant closed
+                            $("#orderModal .modal-title").text("Restaurant Closed");
+                            $("#orderModal .modal-body").html(`<p>Sorry, the restaurant is currently closed. It will be open at ${response.opening_time}</p>`);
+                            $("#orderModal .modal-footer").html(`<a href="restaurants.php"><button class="btn btn-success">Change Restaurant</button></a>`);
+                            $("#orderModalOverlay").attr("data-open", "true");
+                            setTimeout(() => $("#orderModal").attr("data-ready", "true"), 10);
+                        } else {
+                            // Restaurant open, check minimum order
+                            $.ajax({
+                                url: "ajax/fetch_cart.php",
+                                type: "POST",
+                                dataType: "json",
+                                data: {
+                                    min_amount: true,
+                                    total: total
+                                },
+                                success: function(minResp) {
+                                    if (total < minResp.min_order) {
+                                        $("#orderModal .modal-title").text("Minimum Order Required");
+                                        $("#orderModal .modal-body").html(`<p>Minimum order amount is ₹${minResp.min_order}. Please add more items to your cart.</p>`);
+                                        $("#orderModal .modal-footer").html(`<a href="restaurant_menu.php"><button class="btn btn-success">Add Items</button></a>`);
+                                    } else {
+                                        $.ajax({
+                                            url: "ajax/fetch_cart.php",
+                                            type: "POST",
+                                            dataType: "json",
+                                            data: { is_address: true },
+                                            success: function(res) {
+                                                if (res.status === true) {
+                                                    // User address found
+                                                    $("#orderModal .modal-title").text("Confirm Your Order");
+                                                    $("#orderModal .modal-body").html(`<p>Are you sure you want to proceed with this order?</p>
+                                                    <div class="summary">
+                                                        <div class="info">
+                                                            <span class="name">Total Amount: ₹${total.toFixed(2)}</span>
+                                                            <span class="muted">Delivery to your address</span>
+                                                        </div>
+                                                    </div>`);
+                                                    $("#orderModal .modal-footer").html(`
+                                                    <button class="btn btn-outline" id="cancelOrder">Cancel</button>
+                                                    <input type="hidden" id="subtotal" value="${subtotal.toFixed(2)}">
+                                                    <input type="hidden" id="taxes" value="${taxes.toFixed(2)}">
+                                                    <input type="hidden" id="delivery_fee" value="${delivery_fee.toFixed(2)}">
+                                                    <input type="hidden" id="total_val" value="${total.toFixed(2)}">
+                                                    <button class="btn btn-success" id="confirmOrder">Confirm Order</button>
+                                                    `);
+                                                    $("#confirmOrder").off("click").on("click", placeOrder);
+                                                } else {
+                                                    // No default address found
+                                                    $("#orderModal .modal-title").text("Address Required");
+                                                    $("#orderModal .modal-body").html(`<p>Please add your delivery address before placing the order.</p>`);
+                                                    $("#orderModal .modal-footer").html(`<a href="address.php"><button class="btn btn-success">Add Address</button></a>`);  
+                                                }
+                                            }   
+                                        });
+                                    }
+                                    $("#orderModalOverlay").attr("data-open", "true");
+                                    setTimeout(() => $("#orderModal").attr("data-ready", "true"), 10);
+                                }
+                            });
+                        }
+                    }
+                });
+
+            },
+            error: function() {
+                alert("Failed to fetch cart summary.");
+            },
+            complete: function() {
+                ajaxInProgress = false;
+            }
+        });
+        // Close modal: X, Cancel, or overlay click
+        $(document).on("click", "#closeModal, #cancelOrder, #orderModalOverlay", function(e) {
+            if ($(e.target).is("#orderModalOverlay") || $(e.target).is("#closeModal") || $(e.target).is("#cancelOrder")) {
+                $("#orderModal").removeAttr("data-ready");
+                setTimeout(() => $("#orderModalOverlay").removeAttr("data-open"), 200);
             }
         });
     });
 </script>
 
 
-<script>
-    // Get elements
-    const orderModalOverlay = document.getElementById("orderModalOverlay");
-    const orderModal = document.getElementById("orderModal");
-    const closeModal = document.getElementById("closeModal");
-    const cancelOrder = document.getElementById("cancelOrder");
-
-    // Open modal (event delegation)
-    document.addEventListener("click", function(e) {
-        if (e.target && e.target.id === "checkoutButton") {
-            orderModalOverlay.setAttribute("data-open", "true");
-            setTimeout(() => orderModal.setAttribute("data-ready", "true"), 10);
-        }
-    });
-
-    // Close modal function
-    function closeOrderModal() {
-        orderModal.removeAttribute("data-ready");
-        setTimeout(() => orderModalOverlay.removeAttribute("data-open"), 200);
-    }
-
-    // Close events
-    closeModal.addEventListener("click", closeOrderModal);
-    cancelOrder.addEventListener("click", closeOrderModal);
-
-    // Also close when clicking outside modal
-    orderModalOverlay.addEventListener("click", (e) => {
-        if (e.target === orderModalOverlay) closeOrderModal();
-    });
-</script>
 
 </html>

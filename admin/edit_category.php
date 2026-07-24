@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'database_connection.php';
+include '../config/database_connection.php';
 
 $restaurant_id = $_SESSION['admin_id'];
 
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Category Editor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin_style/edit_category.css">
+    <link rel="stylesheet" href="style/edit_category.css">
 </head>
 
 <body>
@@ -55,40 +55,74 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                 </div>
             </form>
 
-            <?php
-            $sql_1 = "SELECT * FROM categories WHERE restaurant_id = ?";
-            $stmt_1 = $conn->prepare($sql_1);
-            $stmt_1->bind_param("i", $restaurant_id);
-            $stmt_1->execute();
-            $result_1 = $stmt_1->get_result();
+            <div class="category-list" id="categoryList">
+                <?php
+                $sql_1 = "SELECT * FROM categories WHERE restaurant_id = ? ORDER BY display_order ASC";
+                $stmt_1 = $conn->prepare($sql_1);
+                $stmt_1->bind_param("i", $restaurant_id);
+                $stmt_1->execute();
+                $result_1 = $stmt_1->get_result();
 
-            if ($result_1 && $result_1->num_rows > 0) {
-                while ($row = $result_1->fetch_assoc()) {
+                if ($result_1 && $result_1->num_rows > 0) {
+                    while ($row = $result_1->fetch_assoc()) {
+                        echo '
+            <div class="category-item" data-id="' . $row['id'] . '">
+                <span class="category-name">' . htmlspecialchars($row['name']) . '</span>
+                <a href="?id=' . $row['id'] . '" onclick="return confirm(\'Are you sure?\')">
+                    <button class="delete-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </a>
+            </div>';
+                    }
+                } else {
                     echo '
-                    <div class="category-item">
-                        <span class="category-name">' . htmlspecialchars($row['name']) . '</span>
-                        <a href="?id=' . $row['id'] . '" onclick="return confirm(\'Are you sure?\')">
-                            <button class="delete-btn">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </a>
-                    </div>';
+        <div class="empty-state" id="emptyState">
+            <i class="fas fa-tag"></i>
+            <p>No categories yet. Add some using the input above.</p>
+        </div>';
                 }
-            } else {
-                echo '
-                <div class="category-list" id="categoryList">
-                    <div class="empty-state" id="emptyState">
-                        <i class="fas fa-tag"></i>
-                        <p>No categories yet. Add some using the input above.</p>
-                    </div>
-                </div>';
-            }
+                $stmt_1->close();
+                ?>
+            </div>
 
-            $stmt_1->close();
-            $conn->close();
-            ?>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        const categoryList = document.getElementById('categoryList');
+
+        Sortable.create(categoryList, {
+            animation: 150,
+            onEnd: function(evt) {
+                const order = [];
+                categoryList.querySelectorAll('.category-item').forEach((item, index) => {
+                    order.push({
+                        id: item.getAttribute('data-id'),
+                        position: index + 1
+                    });
+                });
+
+                // Send AJAX request to update order
+                fetch('update_category_order.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(order)
+                    }).then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Order updated');
+                        } else {
+                            console.error('Update failed');
+                        }
+                    });
+            }
+        });
+    </script>
+
 </body>
+
 
 </html>

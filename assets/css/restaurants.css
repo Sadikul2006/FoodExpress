@@ -1,0 +1,404 @@
+.nav {
+  gap: 0px !important;
+}
+
+body {
+  padding-bottom: 80px !important;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+#logo_img {
+  height: 45px;
+  width: auto;
+  transition: var(--transition);
+}
+
+#logo_img:hover {
+  transform: scale(1.05);
+}
+
+.search-nav {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 600px;
+  margin: 0 30px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 30px;
+  padding: 8px 20px;
+  transition: var(--transition);
+  width: 100%;
+  height: 40px;
+}
+
+#live-search {
+  border: none;
+  outline: none;
+  padding: 8px 12px;
+  font-size: 1rem;
+  background: transparent;
+  width: 100%;
+  color: var(--text);
+}
+
+.search-bar button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--primary);
+  transition: var(--transition);
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-action-item {
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.7rem;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 15px;
+    height: 65px;
+  }
+
+  .search-nav {
+    margin: 0 15px;
+  }
+
+  .search-bar {
+    padding: 6px 15px;
+  }
+
+  #live-search {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav {
+    padding: 0 10px;
+  }
+
+  #logo_img {
+    height: 35px;
+  }
+
+  .search-nav {
+    margin: 0 10px;
+  }
+
+  .search-bar {
+    padding: 3px 4px;
+  }
+
+  #live-search {
+    font-size: 0.85rem;
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  background: white;
+  border-bottom: 1px solid #e9ecef;
+  position: sticky;
+  top: 60px;
+  z-index: 100;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #495057;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-btn:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.filter-btn i {
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.filter-btn.active i {
+  transform: scale(1.1);
+}
+
+.filter-btn span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Color variations for different filter types */
+.filter-btn:nth-child(1) i {
+  color: #ff6b6b;
+}
+
+.filter-btn:nth-child(2) i {
+  color: #ffd43b;
+}
+
+.filter-btn:nth-child(3) i {
+  color: #74c0fc;
+}
+
+.filter-btn:nth-child(4) i {
+  color: #f783ac;
+}
+
+.filter-btn:nth-child(5) i {
+  color: #94d82d;
+}
+
+.filter-btn.active i {
+  color: white;
+}
+
+@media (max-width: 480px) {
+  .filters {
+    padding: 12px 10px;
+    gap: 8px;
+  }
+
+  .filter-btn {
+    padding: 8px 14px;
+  }
+
+  .filter-btn span {
+    font-size: 0.8rem;
+  }
+
+  .filter-btn i {
+    font-size: 0.8rem;
+  }
+}
+
+/* Restaurant Section */
+.restaurant-section {
+  max-width: 1300px;
+  padding: 0 1rem;
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.section-title h2 {
+  font-size: 1.4rem;
+  color: var(--dark);
+}
+
+.section-title p {
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+.restaurant-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: var(--dark);
+  width: 220px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.restaurant-image {
+  height: 120px;
+  overflow: hidden;
+  position: relative;
+}
+
+.restaurant-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.restaurant-card:hover .restaurant-image img {
+  transform: scale(1.05);
+}
+
+.restaurant-rating {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background-color: #ffffffa3;
+  color: var(--text-color);
+}
+
+.restaurant-rating i {
+  color: var(--warning);
+  font-size: 0.7rem;
+}
+
+.restaurant-info {
+  padding: 0.8rem;
+}
+
+.restaurant-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0.3rem;
+}
+
+.restaurant-info h3 {
+  font-size: 1rem;
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.restaurant-status {
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.restaurant-status.open {
+  background-color: #d1fae5;
+  color: var(--success);
+}
+
+.restaurant-status.closed {
+  color: var(--danger);
+  background-color: #fee2e2;
+}
+
+.restaurant-cuisine {
+  color: var(--gray);
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+  display: flex;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+
+.restaurant-cuisine i {
+  color: var(--primary);
+  font-size: 0.7rem;
+  padding-top: 3px;
+}
+
+.restaurant-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.restaurant-delivery {
+  font-size: 0.75rem;
+  color: var(--gray);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.2rem;
+}
+
+.restaurant-delivery i {
+  color: var(--success);
+  font-size: 0.7rem;
+}
+
+#delivery {
+  font-size: 0.8rem;
+  color: var(--success);
+}
+
+/* All Restaurants Grid */
+.all-restaurants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 10px;
+}
+
+.all-restaurants-grid .restaurant-card {
+  width: 100%;
+}
+
+.section-header {
+  text-align: center;
+}
+
+.section-header h3 {
+  color: var(--dark);
+  font-weight: 600;
+  padding: 5px;
+}
+
+a.restaurant-card.active {
+  border: 2.1px solid var(--primary);
+  background: linear-gradient(to right, #f5e2e2, #deefff);
+}
+
+.sc {
+  padding: 0.3rem 0.8rem;
+}

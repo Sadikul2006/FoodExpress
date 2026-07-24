@@ -1,0 +1,28 @@
+# Composer
+/vendor/
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# User Uploads
+/uploads/*
+/admin/uploads/*
+
+# Keep folder structure
+!/uploads/.gitkeep
+!/admin/uploads/.gitkeep
+
+# Temporary Images
+*.tmp
+*.bak

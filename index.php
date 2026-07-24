@@ -1,9 +1,9 @@
 <?php
 session_start();
-include 'database_connection.php';
+include 'config/database_connection.php';
 
 if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
+    header("Location: restaurant_menu.php");
     exit();
 }
 ?>
@@ -46,7 +46,12 @@ if (isset($_SESSION['user_id'])) {
             line-height: 1.6;
         }
 
-        /* Header Styles */
+        a {
+            text-decoration: none;
+            color: var(--primary-dark);
+        }
+
+        /* Header */
         header {
             background-color: white;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -66,67 +71,57 @@ if (isset($_SESSION['user_id'])) {
             margin: 0 auto;
         }
 
-        .logo {
+        .logo-container {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-weight: 700;
-            font-size: 1.3rem;
-            color: var(--primary);
-            text-decoration: none;
         }
 
-        .logo i {
-            font-size: 1.5rem;
-        }
-
-        .auth-buttons {
+        #logo_img {
             height: 50px;
             width: auto;
-            display: flex;
-            gap: 0.8rem;
+            transition: 0.3s ease;
         }
 
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 50px;
+        #logo_img:hover {
+            transform: scale(1.05) rotate(-5deg);
+        }
+
+        /* Auth Buttons */
+        .auth-buttons button {
+            padding: 9px 18px;
+            border-radius: 30px;
+            border: 2px solid;
             font-weight: 600;
-            font-size: 0.85rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
             cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            white-space: nowrap;
+            transition: all 0.3s;
         }
 
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        .btn-outline {
-            border: 2px solid var(--primary);
-            color: var(--primary);
+        .login {
             background: transparent;
+            color: #333;
+            margin-right: 10px;
+            border: 1px solid #ddd;
         }
 
-        .btn-outline:hover {
-            background-color: rgba(255, 107, 107, 0.1);
+        .signup {
+            background: #e74c3c;
+            color: white;
+            border-color: #e74c3c;
+        }
+
+        .auth-buttons button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         /* Hero Section */
         .hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+                url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1350&q=80');
             background-size: cover;
             background-position: center;
             color: white;
-            padding: 4rem 1.5rem;
+            padding: 4rem 1.5rem 0;
             text-align: center;
             min-height: 65vh;
             display: flex;
@@ -151,189 +146,105 @@ if (isset($_SESSION['user_id'])) {
             opacity: 0.9;
         }
 
-        .order-btn {
-            background-color: var(--secondary);
-            color: white;
-            padding: 0.8rem 1.8rem;
-            font-size: 1rem;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            display: inline-block;
-            transition: all 0.3s ease;
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
         }
 
-        .order-btn:hover {
-            background-color: var(--secondary-dark);
-        }
-
-        /* Restaurant Selection Section
-        .restaurant-section {
-            padding: 3rem 1rem;
-            max-width: 1300px;
-            margin: 0 auto;
-        }
-
-        .section-title {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .section-title h2 {
-            font-size: 1.6rem;
-            color: var(--darker);
-        }
-
-        .section-title p {
-            font-size: 0.95rem;
-            color: var(--gray);
-        }
-
-        .restaurant-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-        }
-
-        .restaurant-card {
+        .modal-content {
             background: white;
             border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: var(--dark);
-        }
-
-        .restaurant-image {
-            height: 160px;
-            overflow: hidden;
+            max-width: 400px;
+            width: 90%;
+            padding: 40px;
             position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
-        .restaurant-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .restaurant-rating {
+        .close-btn {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 15px;
-            font-size: 0.7rem;
-            display: flex;
-            align-items: center;
-            gap: 0.2rem;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #777;
         }
 
-        .restaurant-rating i {
-            color: var(--secondary);
-            font-size: 0.7rem;
+        .form-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
         }
 
-        .restaurant-info {
-            padding: 1rem;
+        .input-group {
+            margin-bottom: 20px;
         }
 
-        .restaurant-info h3 {
-            font-size: 1.1rem;
-            margin-bottom: 0.3rem;
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
         }
 
-        .restaurant-cuisine {
-            color: var(--gray);
-            font-size: 0.8rem;
-            margin-bottom: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border 0.3s;
         }
 
-        .restaurant-cuisine i {
-            color: var(--primary);
-            font-size: 0.8rem;
+        .input-group input:focus {
+            border-color: #e74c3c;
+            outline: none;
         }
 
-        .restaurant-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .restaurant-delivery {
-            font-size: 0.8rem;
-            color: var(--gray);
-            display: flex;
-            align-items: center;
-            gap: 0.2rem;
-        }
-
-        .restaurant-delivery i {
-            color: var(--success);
-            font-size: 0.8rem;
-        }
-
-        .view-menu-btn {
-            background-color: var(--primary);
+        .submit-btn {
+            width: 100%;
+            background: #e74c3c;
             color: white;
             border: none;
+            padding: 12px;
             border-radius: 5px;
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-        } */
-
-        /* Login Options */
-        .login-options {
-            background-color: white;
-            padding: 3rem 1rem;
+            transition: background 0.3s;
         }
 
-        .login-container {
-            max-width: 800px;
-            margin: 0 auto;
+        .submit-btn:hover {
+            background: #c0392b;
         }
 
-        .login-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .login-option {
-            background-color: var(--light);
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        .form-footer,
+        .form-switch {
             text-align: center;
+            margin-top: 20px;
         }
 
-        .login-option i {
-            font-size: 2rem;
-            color: var(--primary);
-            margin-bottom: 0.8rem;
+        .form-footer a,
+        .form-switch a {
+            color: #e74c3c;
+            text-decoration: none;
+            font-weight: 500;
         }
 
-        .login-option h3 {
-            font-size: 1.2rem;
-            margin-bottom: 0.5rem;
+        .form-footer a:hover,
+        .form-switch a:hover {
+            text-decoration: underline;
         }
 
-        .login-option p {
-            font-size: 0.9rem;
-            color: var(--gray);
-            margin-bottom: 1.2rem;
-        }
-
-        .login-buttons {
-            display: flex;
-            gap: 0.8rem;
-            justify-content: center;
+        .form-switch {
+            padding-top: 20px;
+            border-top: 1px solid #eee;
         }
 
         /* Footer */
@@ -341,27 +252,6 @@ if (isset($_SESSION['user_id'])) {
             background-color: var(--darker);
             color: white;
             padding: 3rem 1rem 1.5rem;
-        }
-
-        .footer-content {
-            max-width: 1300px;
-            margin: 0 auto;
-        }
-
-        .footer-logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 1.5rem;
-            display: block;
-            text-align: center;
-        }
-
-        .footer-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
         }
 
         .footer-column {
@@ -425,205 +315,215 @@ if (isset($_SESSION['user_id'])) {
             font-size: 0.8rem;
         }
 
-        /* Tablet View */
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            background: #e74c3c;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn:hover {
+            background: #c0392b;
+            transform: translateY(-3px);
+        }
+
+        .admin-login {
+            margin-top: 40px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        html {
+            scrollbar-width: none;
+        }
+
+        /* Responsive */
         @media (min-width: 600px) {
-            .restaurant-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .footer-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
             .hero h1 {
                 font-size: 2rem;
             }
         }
 
-        /* Desktop View */
-        @media (min-width: 900px) {
-            header {
-                padding: 0 2rem;
-            }
-
-            .hero {
-                padding: 5rem 2rem;
-            }
-
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .restaurant-section {
-                padding: 4rem 2rem;
-            }
-
-            .restaurant-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-
-            .login-grid {
-                flex-direction: row;
-                gap: 2rem;
-            }
-
-            .footer-grid {
-                grid-template-columns: repeat(3, 1fr);
-                text-align: left;
-            }
-
-            .footer-column {
-                text-align: left;
-            }
-
-            .social-links {
-                justify-content: flex-start;
-            }
+        /* Forgot Password Specific Styles */
+        .forgot-password-step {
+            transition: all 0.3s ease;
         }
 
-        /* Animation Classes */
-        .animate__animated {
-            opacity: 0;
+        .forgot-password-instructions {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #666;
         }
 
-        .animate__fadeIn {
-            animation: fadeIn 1s forwards;
+        .user-email {
+            font-weight: 600;
+            color: #333;
         }
 
-        .animate__fadeInDown {
-            animation: fadeInDown 1s forwards;
+        .timer {
+            color: #e74c3c;
+            font-weight: 600;
         }
 
-        .animate__fadeInUp {
-            animation: fadeInUp 1s forwards;
+        /* OTP Input Styles */
+        .otp-container {
+            margin: 20px 0;
         }
 
-        .animate__fadeInLeft {
-            animation: fadeInLeft 1s forwards;
-        }
-
-        .animate__fadeInRight {
-            animation: fadeInRight 1s forwards;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes fadeInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-        }
-
-        #logo_img {
-            height: 50px;
-            width: auto;
-            transition: var(--transition);
-        }
-
-        #logo_img:hover {
-            transform: scale(1.05) rotate(-5deg);
-        }
-
-        .loginReg {
-            height: 50px;
-            width: 70px;
-            margin: 0;
-            padding: 0;
+        .otp-inputs {
             display: flex;
             justify-content: center;
-            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .otp-input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .otp-input:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+            outline: none;
+        }
+
+        .otp-input.filled {
+            border-color: #4CAF50;
+            background-color: #f8fff8;
+        }
+
+        /* Form Actions */
+        .form-actions {
+            display: flex;
             flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
         }
 
-        #loginReg {
-            height: 45px;
-            width: 80px;
+        .submit-btn.secondary {
+            background-color: #6c757d;
         }
 
-        small {
-            font-size: 10px;
+        .submit-btn.secondary:hover {
+            background-color: #5a6268;
         }
 
-        a {
-            text-decoration: none;
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Password Strength Meter */
+        .password-strength {
+            margin: 15px 0;
+        }
+
+        .strength-bar {
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            background: #e74c3c;
+            transition: all 0.3s ease;
+        }
+
+        .strength-text {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Success State */
+        .success-state {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .success-icon {
+            margin-bottom: 20px;
+        }
+
+        .success-icon i {
+            font-size: 60px;
+            color: #4CAF50;
+        }
+
+        /* Messages */
+        .message {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .small-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .form-text {
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
         }
     </style>
 </head>
 
 <body>
-
-    <!-- Header with Login/Register -->
     <header>
         <nav class="navbar">
             <a href="#" class="logo-container logo animate__animated animate__fadeIn">
-                <img src="images/logo.png" id="logo_img" alt="Restaurant Logo">
+                <img src="assets/images/logo.png" id="logo_img" alt="Restaurant Logo">
             </a>
             <div class="auth-buttons">
-                <a href="#user-login" id="loginReg" class="btn btn-primary animate__animated animate__fadeIn animate__delay-1s">
-                    <div class="loginReg">
-                        <i class="fas fa-sign-in-alt"></i><small>LOGIN</small>
-                    </div>
-                </a>
-                <a href="#user-login" id="loginReg" class="btn btn-outline animate__animated animate__fadeIn animate__delay-1-2s">
-                    <div class="loginReg">
-                        <i class="fas fa-user-plus"></i><small>REGISTER</small>
-                    </div>
-                </a>
+                <button class="login" id="loginBtn">Login</button>
+                <button class="signup" id="signupBtn">Sign Up</button>
             </div>
         </nav>
     </header>
@@ -632,143 +532,753 @@ if (isset($_SESSION['user_id'])) {
     <section class="hero">
         <div class="hero-content">
             <h1 class="animate__animated animate__fadeInDown">Order from Your Favorite Restaurants</h1>
-            <p class="animate__animated animate__fadeIn animate__delay-1s">Discover the best dining options in your area and get food delivered to your doorstep</p>
+            <p class="animate__animated animate__fadeIn animate__delay-1s">
+                Discover the best dining options in your area and get food delivered to your doorstep
+            </p>
+
+            <button class="btn" id="heroLoginBtn" type="button">Order Now</button>
+            <p class="animate__animated animate__fadeIn animate__delay-1s admin-login">
+                Are you Restaurant Owner ? <a href="admin/index.php">Click here</a>
+            </p>
         </div>
     </section>
 
-    <!-- Restaurant Selection Section -->
-   
+    <!-- Login Modal -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeLogin">&times;</span>
+            <h2 class="form-title">Login</h2>
 
-    <!-- Login Options Section -->
-    <section class="login-options" id="user-login">
-        <div class="login-container">
-            <!-- <div class="section-title">
-                <h2 class="animate__animated animate__fadeIn">Login Options</h2>
-                <p class="animate__animated animate__fadeIn animate__delay-1s">Choose how you want to access our platform</p>
-            </div> -->
+            <form id="loginForm" action="action_login_register.php" method="POST">
+                <input type="hidden" name="action" value="login">
 
-            <div class="login-grid">
-                <div class="login-option animate__animated animate__fadeInLeft">
-                    <i class="fas fa-user"></i>
-                    <h3>Customer Login</h3>
-                    <p>Order food from your favorite restaurants</p>
-                    <div class="login-buttons">
-                        <a href="user_login_register.php?tab=login" class="btn btn-primary">Login</a>
-                        <a href="user_login_register.php?tab=register" class="btn btn-outline">Register</a>
-                    </div>
+                <div class="input-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" name="email" placeholder="Enter your email" required>
                 </div>
 
-                <div class="login-option animate__animated animate__fadeInRight">
-                    <i class="fas fa-store"></i>
-                    <h3>Restaurant Owner</h3>
-                    <p>Manage your restaurant and orders</p>
-                    <div class="login-buttons">
-                        <a href="admin/admin_login_register.php" class="btn btn-primary">Login</a>
-                        <a href="admin/admin_login_register.php" class="btn btn-outline">Register</a>
+                <div class="input-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" name="password" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="submit-btn">Login</button>
+
+                <div class="form-footer">
+                    <a href="#" id="showForgotPassword">Forgot your password?</a>
+                </div>
+
+                <div class="form-switch">
+                    <p>Don't have an account? <a href="#" id="switchToSignup">Sign up</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal" id="signupModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeSignup">&times;</span>
+            <h2 class="form-title">Register</h2>
+
+            <form id="signupForm" action="action_login_register.php" method="POST">
+                <input type="hidden" name="action" value="signup">
+
+                <div class="input-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" name="name" placeholder="Enter your full name" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" name="email" placeholder="Enter your email" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" name="password" placeholder="Create a password" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                </div>
+
+                <button type="submit" class="submit-btn">Create Account</button>
+
+                <div class="form-switch">
+                    <p>Already have an account? <a href="#" id="switchToLogin">Login</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal with OTP Verification -->
+    <div class="modal" id="forgotPasswordModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeForgotPassword">&times;</span>
+
+            <!-- Step 1: Enter Email -->
+            <div id="forgotPasswordStep1" class="forgot-password-step">
+                <h2 class="form-title">Reset Your Password</h2>
+
+                <div class="forgot-password-instructions">
+                    <p>Enter your email address and we'll send you an OTP to reset your password.</p>
+                </div>
+
+                <form id="forgotPasswordForm">
+                    <div class="input-group">
+                        <label for="forgotPasswordEmail">Email Address</label>
+                        <input type="email" id="forgotPasswordEmail" name="email" placeholder="Enter your registered email" required>
+                        <small class="form-text">We'll send a 6-digit OTP to this email</small>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="sendOtpBtn">Send OTP</button>
+
+                    <div id="forgotPasswordMessage" class="message" style="display: none;"></div>
+
+                    <div class="form-switch">
+                        <p>Remember your password? <a href="#" id="backToLogin">Back to Login</a></p>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Enter OTP -->
+            <div id="forgotPasswordStep2" class="forgot-password-step" style="display: none;">
+                <h2 class="form-title">Verify OTP</h2>
+
+                <div class="forgot-password-instructions">
+                    <p>Enter the 6-digit OTP sent to <span id="userEmailDisplay" class="user-email"></span></p>
+                    <p class="small-text">OTP expires in <span id="otpTimer" class="timer">05:00</span></p>
+                </div>
+
+                <form id="verifyOtpForm">
+                    <div class="otp-container">
+                        <div class="otp-inputs">
+                            <input type="text" class="otp-input" maxlength="1" data-index="1" inputmode="numeric" pattern="[0-9]*">
+                            <input type="text" class="otp-input" maxlength="1" data-index="2" inputmode="numeric" pattern="[0-9]*">
+                            <input type="text" class="otp-input" maxlength="1" data-index="3" inputmode="numeric" pattern="[0-9]*">
+                            <input type="text" class="otp-input" maxlength="1" data-index="4" inputmode="numeric" pattern="[0-9]*">
+                            <input type="text" class="otp-input" maxlength="1" data-index="5" inputmode="numeric" pattern="[0-9]*">
+                            <input type="text" class="otp-input" maxlength="1" data-index="6" inputmode="numeric" pattern="[0-9]*">
+                        </div>
+                        <input type="hidden" id="otpCode" name="otp">
+                    </div>
+
+                    <div id="otpMessage" class="message" style="display: none;"></div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn" id="verifyOtpBtn" disabled>Verify OTP</button>
+                        <button type="button" class="submit-btn secondary" id="resendOtpBtn" disabled>Resend OTP (<span id="resendTimer">60</span>s)</button>
+                    </div>
+
+                    <div class="form-switch">
+                        <p><a href="#" id="backToEmailStep">Use different email</a></p>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 3: Reset Password -->
+            <div id="forgotPasswordStep3" class="forgot-password-step" style="display: none;">
+                <h2 class="form-title">Create New Password</h2>
+
+                <div class="forgot-password-instructions">
+                    <p>Create a new password for your account.</p>
+                </div>
+
+                <form id="resetPasswordForm">
+                    <div class="input-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" name="new_password" placeholder="Enter new password" required>
+                        <small class="form-text">Must be at least 8 characters with letters and numbers</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="confirmNewPassword">Confirm Password</label>
+                        <input type="password" id="confirmNewPassword" name="confirm_new_password" placeholder="Confirm new password" required>
+                    </div>
+
+                    <div class="password-strength">
+                        <div class="strength-bar">
+                            <div class="strength-fill"></div>
+                        </div>
+                        <span class="strength-text">Password strength: <span id="strengthText">Weak</span></span>
+                    </div>
+
+                    <div id="resetPasswordMessage" class="message" style="display: none;"></div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn" id="resetPasswordBtn">Reset Password</button>
+                    </div>
+
+                    <div class="form-switch">
+                        <p><a href="#" id="backToLoginFromReset">Back to Login</a></p>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 4: Success Message -->
+            <div id="forgotPasswordStep4" class="forgot-password-step" style="display: none;">
+                <div class="success-state">
+                    <div class="success-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2>Password Reset Successful!</h2>
+                    <p>Your password has been reset successfully.</p>
+                    <p class="small-text">You can now login with your new password.</p>
+
+                    <div class="form-actions">
+                        <button class="submit-btn" id="goToLoginBtn">Login Now</button>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- Footer -->
     <footer>
-        <div class="footer-content">
-            <a href="#" class="footer-logo">FoodExpress</a>
-
-            <div class="footer-grid">
-                <div class="footer-column">
-                    <h3>Quick Links</h3>
-                    <div class="footer-links">
-                        <a href="#" class="footer-link">Home</a>
-                        <a href="#restaurants" class="footer-link">Restaurants</a>
-                        <a href="#" class="footer-link">About Us</a>
-                        <a href="#" class="footer-link">Special Offers</a>
-                    </div>
-                </div>
-
-                <div class="footer-column">
-                    <h3>Information</h3>
-                    <div class="footer-links">
-                        <a href="#" class="footer-link">Contact Us</a>
-                        <a href="#" class="footer-link">Privacy Policy</a>
-                        <a href="#" class="footer-link">Terms of Service</a>
-                        <a href="#" class="footer-link">FAQs</a>
-                    </div>
-                </div>
-
-                <div class="footer-column">
-                    <h3>Contact Us</h3>
-                    <div class="footer-links">
-                        <a href="#" class="footer-link">123 Food Street, City</a>
-                        <a href="tel:+1234567890" class="footer-link">+1 (234) 567-890</a>
-                        <a href="mailto:info@foodexpress.com" class="footer-link">info@foodexpress.com</a>
-                    </div>
-
-                    <div class="social-links">
-                        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
-                    </div>
-                </div>
+        <div class="footer-column">
+            <h3>Contact Us</h3>
+            <div class="footer-links">
+                <a href="#" class="footer-link">Newtown, Kolkata</a>
+                <a href="tel:+1234567890" class="footer-link">+91 7872408254</a>
+                <a href="mailto:info@foodexpress.com" class="footer-link">sadikulseikh56@gmail.com</a>
             </div>
 
-            <p class="copyright">© 2023 FoodExpress. All rights reserved.</p>
+            <div class="social-links">
+                <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+                <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+            </div>
         </div>
+        <p class="copyright">© 2023 FoodExpress. All rights reserved.</p>
     </footer>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
+        $(document).ready(function() {
+            // Modal elements using jQuery selectors
+            const $loginBtn = $('#loginBtn');
+            const $signupBtn = $('#signupBtn');
+            const $loginModal = $('#loginModal');
+            const $signupModal = $('#signupModal');
+            const $forgotPasswordModal = $('#forgotPasswordModal');
+            const $closeLogin = $('#closeLogin');
+            const $closeSignup = $('#closeSignup');
+            const $closeForgotPassword = $('#closeForgotPassword');
+            const $switchToSignup = $('#switchToSignup');
+            const $switchToLogin = $('#switchToLogin');
+            const $heroLoginBtn = $('#heroLoginBtn');
+            const $showForgotPassword = $('#showForgotPassword');
+
+            // Open modals using jQuery click handlers
+            $heroLoginBtn.on('click', function() {
+                $loginModal.css('display', 'flex');
+            });
+
+            $loginBtn.on('click', function() {
+                $loginModal.css('display', 'flex');
+            });
+
+            $signupBtn.on('click', function() {
+                $signupModal.css('display', 'flex');
+            });
+
+            // Close modals
+            $closeLogin.on('click', function() {
+                $loginModal.css('display', 'none');
+            });
+
+            $closeSignup.on('click', function() {
+                $signupModal.css('display', 'none');
+            });
+
+            $closeForgotPassword.on('click', function() {
+                $forgotPasswordModal.css('display', 'none');
+            });
+
+            // Switch between login and signup
+            $switchToSignup.on('click', function(e) {
+                e.preventDefault();
+                $loginModal.css('display', 'none');
+                $signupModal.css('display', 'flex');
+            });
+
+            $switchToLogin.on('click', function(e) {
+                e.preventDefault();
+                $signupModal.css('display', 'none');
+                $loginModal.css('display', 'flex');
+            });
+
+            // Close modal when clicking outside
+            $(window).on('click', function(e) {
+                if ($(e.target).is($loginModal)) {
+                    $loginModal.css('display', 'none');
+                }
+                if ($(e.target).is($signupModal)) {
+                    $signupModal.css('display', 'none');
+                }
+                if ($(e.target).is($forgotPasswordModal)) {
+                    $forgotPasswordModal.css('display', 'none');
+                }
+            });
+
+            // Forgot Password Functionality
+            // Elements
+            const $backToLogin = $('#backToLogin');
+            const $backToEmailStep = $('#backToEmailStep');
+            const $backToLoginFromReset = $('#backToLoginFromReset');
+            const $goToLoginBtn = $('#goToLoginBtn');
+
+            // Step containers
+            const $step1 = $('#forgotPasswordStep1');
+            const $step2 = $('#forgotPasswordStep2');
+            const $step3 = $('#forgotPasswordStep3');
+            const $step4 = $('#forgotPasswordStep4');
+
+            // Forms
+            const $forgotPasswordForm = $('#forgotPasswordForm');
+            const $verifyOtpForm = $('#verifyOtpForm');
+            const $resetPasswordForm = $('#resetPasswordForm');
+
+            // Inputs
+            const $forgotPasswordEmail = $('#forgotPasswordEmail');
+            const $userEmailDisplay = $('#userEmailDisplay');
+            const $otpInputs = $('.otp-input');
+            const $otpCodeInput = $('#otpCode');
+            const $newPasswordInput = $('#newPassword');
+            const $confirmNewPasswordInput = $('#confirmNewPassword');
+
+            // Buttons
+            const $sendOtpBtn = $('#sendOtpBtn');
+            const $verifyOtpBtn = $('#verifyOtpBtn');
+            const $resendOtpBtn = $('#resendOtpBtn');
+            const $resetPasswordBtn = $('#resetPasswordBtn');
+
+            // Messages
+            const $forgotPasswordMessage = $('#forgotPasswordMessage');
+            const $otpMessage = $('#otpMessage');
+            const $resetPasswordMessage = $('#resetPasswordMessage');
+
+            // Timers
+            const $otpTimer = $('#otpTimer');
+            const $resendTimerElement = $('#resendTimer');
+
+            // Variables
+            let otpTimerInterval;
+            let resendTimerInterval;
+            let currentEmail = '';
+            let otpExpiryTime = 0;
+            let resendCooldown = 60; // 60 seconds cooldown for resend
+
+            // Open Forgot Password Modal
+            if ($showForgotPassword.length) {
+                $showForgotPassword.on('click', function(e) {
+                    e.preventDefault();
+                    $loginModal.css('display', 'none');
+                    $forgotPasswordModal.css('display', 'flex');
+                    resetForgotPasswordForm();
+                });
+            }
+
+            // Back to Login
+            $backToLogin.on('click', function(e) {
+                e.preventDefault();
+                $forgotPasswordModal.css('display', 'none');
+                $loginModal.css('display', 'flex');
+            });
+
+            // Back to Email Step
+            $backToEmailStep.on('click', function(e) {
+                e.preventDefault();
+                showStep(1);
+                clearTimers();
+            });
+
+            // Back to Login from Reset
+            $backToLoginFromReset.on('click', function(e) {
+                e.preventDefault();
+                $forgotPasswordModal.css('display', 'none');
+                $loginModal.css('display', 'flex');
+            });
+
+            // Go to Login after success
+            $goToLoginBtn.on('click', function() {
+                $forgotPasswordModal.css('display', 'none');
+                $loginModal.css('display', 'flex');
+            });
+
+            // Step 1: Send OTP
+            $forgotPasswordForm.on('submit', function(e) {
                 e.preventDefault();
 
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
+                const email = $forgotPasswordEmail.val().trim();
 
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
+                // Validate email
+                if (!email || !isValidEmail(email)) {
+                    showMessage($forgotPasswordMessage, 'Please enter a valid email address', 'error');
+                    return;
                 }
-            });
-        });
 
-        // Animation on scroll
-        const animateOnScroll = () => {
-            const elements = document.querySelectorAll('.animate__animated');
+                // Show loading state
+                const originalText = $sendOtpBtn.text();
+                $sendOtpBtn.text('Sending...').prop('disabled', true);
 
-            elements.forEach(element => {
-                const elementPosition = element.getBoundingClientRect().top;
-                const windowHeight = window.innerHeight;
+                $.ajax({
+                    url: 'action_forgot_password.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        email: email
+                    },
 
-                if (elementPosition < windowHeight - 100) {
-                    const animationClass = element.classList.item(1);
-                    if (animationClass) {
-                        element.classList.add(animationClass);
+                    success: function(response) {
+
+                        if (response.status === 'error') {
+                            showMessage($forgotPasswordMessage, response.message, 'error');
+                            return;
+                        }
+
+                        // Email exists → OTP sent
+                        currentEmail = email;
+                        $userEmailDisplay.text(email);
+
+                        // Start timers
+                        startOtpTimer(300); // 5 minutes
+                        startResendTimer();
+
+                        // Move to step 2
+                        showStep(2);
+                    },
+
+                    error: function() {
+                        showMessage($forgotPasswordMessage, 'Something went wrong. Try again.', 'error');
+                    },
+
+                    complete: function() {
+                        $sendOtpBtn.text(originalText).prop('disabled', false);
                     }
+                });
+            });
+
+
+            // OTP Input Handling
+            $otpInputs.each(function(index) {
+                const $input = $(this);
+
+                $input.on('input', function(e) {
+                    const value = $(this).val();
+
+                    // Only allow numbers
+                    if (!/^\d*$/.test(value)) {
+                        $(this).val('');
+                        return;
+                    }
+
+                    // Move to next input if a digit is entered
+                    if (value.length === 1 && index < $otpInputs.length - 1) {
+                        $otpInputs.eq(index + 1).focus();
+                    }
+
+                    // Update OTP code and verify button state
+                    updateOtpCode();
+
+                    // Style filled inputs
+                    $(this).toggleClass('filled', value.length === 1);
+                });
+
+                $input.on('keydown', function(e) {
+                    // Handle backspace
+                    if (e.key === 'Backspace' && !$(this).val() && index > 0) {
+                        $otpInputs.eq(index - 1).focus();
+                        $otpInputs.eq(index - 1).removeClass('filled');
+                    }
+                });
+
+                $input.on('paste', function(e) {
+                    e.preventDefault();
+                    const pasteData = e.originalEvent.clipboardData.getData('text').trim();
+
+                    if (/^\d{6}$/.test(pasteData)) {
+                        const digits = pasteData.split('');
+                        $otpInputs.each(function(idx) {
+                            const $currentInput = $(this);
+                            if (digits[idx]) {
+                                $currentInput.val(digits[idx]).addClass('filled');
+                            }
+                        });
+                        updateOtpCode();
+                        $verifyOtpBtn.focus();
+                    }
+                });
+            });
+
+            // Step 2: Verify OTP
+            $verifyOtpForm.on('submit', function(e) {
+                e.preventDefault();
+
+                const otp = $otpCodeInput.val();
+
+                if (otp.length !== 6) {
+                    showMessage($otpMessage, 'Please enter the complete 6-digit OTP', 'error');
+                    return;
                 }
+
+                const originalText = $verifyOtpBtn.text();
+                $verifyOtpBtn.text('Verifying...').prop('disabled', true);
+
+                $.ajax({
+                    url: 'verify_otp.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        otp: otp
+                    },
+
+                    success: function(response) {
+
+                        if (response.status === 'success') {
+                            clearTimers();
+                            showStep(3);
+                        } else {
+                            showMessage($otpMessage, response.message, 'error');
+                            $otpInputs.val('').removeClass('filled');
+                            updateOtpCode();
+                            $otpInputs.first().focus();
+                        }
+                    },
+
+                    error: function() {
+                        showMessage($otpMessage, 'Server error. Try again.', 'error');
+                    },
+
+                    complete: function() {
+                        $verifyOtpBtn.text(originalText).prop('disabled', false);
+                    }
+                });
             });
-        };
 
-        // Run on initial load
-        animateOnScroll();
 
-        // Run on scroll
-        window.addEventListener('scroll', animateOnScroll);
+            // Resend OTP
+            $resendOtpBtn.on('click', function() {
+                if ($resendOtpBtn.prop('disabled')) return;
 
-        // Add click animation to buttons
-        const buttons = document.querySelectorAll('.btn, .order-btn, .restaurant-card');
-        buttons.forEach(button => {
-            button.addEventListener('click', function() {
-                this.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    this.style.transform = '';
-                }, 200);
+                const originalText = $resendOtpBtn.text();
+                $resendOtpBtn.text('Sending...').prop('disabled', true);
+
+                $.ajax({
+                    url: 'resend_otp.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            // Clear OTP inputs
+                            $otpInputs.val('').removeClass('filled');
+                            updateOtpCode();
+
+                            // Restart timers
+                            clearTimers();
+                            startOtpTimer(300); // 5 min
+                            startResendTimer();
+
+                            showMessage($otpMessage, 'New OTP sent successfully!', 'success');
+                            $otpInputs.first().focus();
+                        } else {
+                            showMessage($otpMessage, response.message, 'error');
+                        }
+                    },
+                    error: function() {
+                        showMessage($otpMessage, 'Server error. Try again.', 'error');
+                    },
+                    complete: function() {
+                        $resendOtpBtn.text(originalText).prop('disabled', false);
+                    }
+                });
             });
+
+
+            // Step 3: Reset Password
+            $resetPasswordForm.on('submit', function(e) {
+                e.preventDefault();
+
+                const newPassword = $newPasswordInput.val();
+                const confirmPassword = $confirmNewPasswordInput.val();
+
+                // Validate passwords
+                if (newPassword.length < 8) {
+                    showMessage($resetPasswordMessage, 'Password must be at least 8 characters long', 'error');
+                    return;
+                }
+
+                if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(newPassword)) {
+                    showMessage($resetPasswordMessage, 'Password must contain both letters and numbers', 'error');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    showMessage($resetPasswordMessage, 'Passwords do not match', 'error');
+                    return;
+                }
+
+                const originalText = $resetPasswordBtn.text();
+                $resetPasswordBtn.text('Resetting...').prop('disabled', true);
+
+                $.ajax({
+                    url: 'reset_password.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        password: newPassword
+                    },
+
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            showStep(4); // Success step
+                        } else {
+                            showMessage($resetPasswordMessage, response.message, 'error');
+                        }
+                    },
+
+                    error: function() {
+                        showMessage($resetPasswordMessage, 'Server error. Try again.', 'error');
+                    },
+
+                    complete: function() {
+                        $resetPasswordBtn.text(originalText).prop('disabled', false);
+                    }
+                });
+            });
+
+            // Password Strength Check
+            $newPasswordInput.on('input', function() {
+                checkPasswordStrength($(this).val());
+            });
+
+            // Helper Functions
+            function showStep(stepNumber) {
+                const steps = [$step1, $step2, $step3, $step4];
+                steps.forEach(function($step, index) {
+                    $step.css('display', (index + 1 === stepNumber) ? 'block' : 'none');
+                });
+            }
+
+            function resetForgotPasswordForm() {
+                showStep(1);
+                $forgotPasswordForm.trigger('reset');
+                $verifyOtpForm.trigger('reset');
+                $resetPasswordForm.trigger('reset');
+                $otpInputs.val('').removeClass('filled');
+                updateOtpCode();
+                clearTimers();
+                $forgotPasswordMessage.hide();
+                $otpMessage.hide();
+                $resetPasswordMessage.hide();
+                currentEmail = '';
+            }
+
+            function updateOtpCode() {
+                let otp = '';
+                $otpInputs.each(function() {
+                    otp += $(this).val();
+                });
+                $otpCodeInput.val(otp);
+                $verifyOtpBtn.prop('disabled', otp.length !== 6);
+            }
+
+            function startOtpTimer(seconds) {
+                clearInterval(otpTimerInterval);
+                otpExpiryTime = Date.now() + seconds * 1000;
+
+                otpTimerInterval = setInterval(function() {
+                    const now = Date.now();
+                    const remaining = Math.max(0, Math.floor((otpExpiryTime - now) / 1000));
+
+                    if (remaining <= 0) {
+                        clearInterval(otpTimerInterval);
+                        $otpTimer.text('00:00');
+                        showMessage($otpMessage, 'OTP has expired. Please request a new one.', 'error');
+                        $verifyOtpBtn.prop('disabled', true);
+                        return;
+                    }
+
+                    const minutes = Math.floor(remaining / 60);
+                    const secs = remaining % 60;
+                    $otpTimer.text(`${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+                }, 1000);
+            }
+
+            function startResendTimer() {
+                clearInterval(resendTimerInterval);
+                let cooldown = resendCooldown;
+                $resendOtpBtn.prop('disabled', true);
+                $resendTimerElement.text(cooldown);
+
+                resendTimerInterval = setInterval(function() {
+                    cooldown--;
+                    $resendTimerElement.text(cooldown);
+
+                    if (cooldown <= 0) {
+                        clearInterval(resendTimerInterval);
+                        $resendOtpBtn.prop('disabled', false);
+                        $resendOtpBtn.html('Resend OTP');
+                    }
+                }, 1000);
+            }
+
+            function clearTimers() {
+                clearInterval(otpTimerInterval);
+                clearInterval(resendTimerInterval);
+            }
+
+            function checkPasswordStrength(password) {
+                const $strengthBar = $('.strength-fill');
+                const $strengthText = $('#strengthText');
+
+                let strength = 0;
+                let color = '#e74c3c';
+                let text = 'Weak';
+
+                if (password.length >= 8) strength += 25;
+                if (/[a-z]/.test(password)) strength += 25;
+                if (/[A-Z]/.test(password)) strength += 25;
+                if (/[0-9]/.test(password)) strength += 25;
+                if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+
+                strength = Math.min(strength, 100);
+
+                if (strength >= 75) {
+                    color = '#4CAF50';
+                    text = 'Strong';
+                } else if (strength >= 50) {
+                    color = '#ff9800';
+                    text = 'Medium';
+                }
+
+                $strengthBar.css({
+                    'width': strength + '%',
+                    'background-color': color
+                });
+                $strengthText.text(text).css('color', color);
+            }
+
+            function showMessage($element, text, type) {
+                $element.text(text)
+                    .attr('class', `message ${type}`)
+                    .show();
+
+                // Auto-hide success messages
+                if (type === 'success') {
+                    setTimeout(function() {
+                        $element.hide();
+                    }, 5000);
+                }
+            }
+
+            function isValidEmail(email) {
+                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return re.test(email);
+            }
         });
     </script>
 </body>

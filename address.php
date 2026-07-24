@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'database_connection.php';
+include 'config/database_connection.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -12,22 +12,6 @@ $user_id = $_SESSION['user_id'];
 $name = $phone = $street = $city = $address_type = "";
 $edit_id = 0;
 $error = "";
-
-// if(isset($_GET['default_id'])) {
-//     $default_id = intval($_GET['default_id']);
-    
-//     $stmt = $conn->prepare("UPDATE address SET is_default = 0 WHERE user_id = ?");
-//     $stmt->bind_param("i", $user_id);
-//     $stmt->execute();
-//     $stmt->close();
-    
-//     $stmt = $conn->prepare("UPDATE address SET is_default = 1 WHERE id = ? AND user_id = ?");
-//     $stmt->bind_param("ii", $default_id, $user_id);
-// 	$stmt->execute();
-//     $stmt->close();
-//     header("Location: user_info.php");
-//     exit();
-// }
 
 // ---------- Edit mode data load ----------
 if (isset($_GET['edit_id'])) {
@@ -46,7 +30,7 @@ if (isset($_GET['edit_id'])) {
         $address_type = htmlspecialchars($row['address_type']);
     } else {
         $_SESSION['error'] = "Address not found!";
-        header("Location: user_info.php");
+        header("Location: account.php");
         exit();
     }
     $stmt->close();
@@ -75,7 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if ($stmt->execute()) {
                 $_SESSION['success'] = "Address updated successfully!";
                 $stmt->close();
-                header("Location: user_info.php");
+                header("Location: account.php");
                 exit();
             } else {
                 $error = "Failed to update address: " . $conn->error;
@@ -96,7 +80,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if ($stmt->execute()) {
                 $_SESSION['success'] = "Address added successfully!";
                 $stmt->close();
-                header("Location: user_info.php");
+                header("Location: account.php");
                 exit();
             } else {
                 $error = "Failed to add address: " . $conn->error;
@@ -105,7 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
-$conn->close();
+// $conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -115,32 +99,20 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $edit_id > 0 ? 'Edit' : 'Add'; ?> Address</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="app_style/address.css">
+    <link rel="stylesheet" href="assets/css/address.css">
 </head>
 
 <body>
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert success">
-            <i class="fa-solid fa-circle-check"></i>
-            <?php
-            echo $_SESSION['success'];
-            unset($_SESSION['success']);
-            ?>
+    <?php include 'includes/alert_box.php'?>
+    <div class="nav">
+        <a href="account.php" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h3>Address Form</h3>
+        <div style="display: flex; gap: 10px;">
         </div>
-    <?php endif; ?>
-    
-    <?php if (!empty($error)): ?>
-        <div class="alert error">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <?php echo $error; ?>
-        </div>
-    <?php endif; ?>
-
+    </div>
     <div class="form-container">
-        <div class="arrow">
-            <a href="user_info.php"><i id="arroBtn" class="fa-solid fa-arrow-left"></i></a>
-            <h2><?php echo $edit_id > 0 ? 'Edit' : 'Add'; ?> Delivery Address</h2>
-        </div>
         <form action="" method="POST" onsubmit="return validateForm()">
             <input type="hidden" name="edit_id" value="<?php echo $edit_id; ?>">
 
@@ -173,7 +145,7 @@ $conn->close();
                 <label>Address Type</label>
                 <div class="address-type-options">
                     <div class="address-type-option">
-                        <input type="radio" id="home" name="address_type" value="Home" <?php echo ($address_type == "Home") ? 'checked' : ''; ?> required>
+                        <input type="radio" id="home" name="address_type" value="Home" checked <?php echo ($address_type == "Home") ? 'checked' : ''; ?> required>
                         <label for="home">
                             <span><i class="fas fa-home"></i> Home</span>
                         </label>
@@ -187,11 +159,13 @@ $conn->close();
                 </div>
             </div>
 
-            <button type="submit">
+            <button class="action-btn btn-primary save-btn">
                 <i class="fas fa-check-circle"></i> Save Address
             </button>
         </form>
     </div>
+
+    <?php include 'includes/footer_nav.php'; ?>
 
     <script>
         function validateForm() {
