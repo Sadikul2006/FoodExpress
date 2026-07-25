@@ -287,7 +287,7 @@ if ($result) {
                     </tr>
                 </thead>
                 <tbody id="recent_order">
-                    
+
                 </tbody>
             </table>
 
@@ -298,79 +298,171 @@ if ($result) {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://js.pusher.com/8.2/pusher.min.js"></script>
 <script>
-const pusher = new Pusher("c1756ac2bb163dfeacbf", {
-    cluster: "ap2"
-});
+    const pusher = new Pusher("c1756ac2bb163dfeacbf", {
+        cluster: "ap2"
+    });
 
-const channel = pusher.subscribe("foodexpress");
+    const channel = pusher.subscribe("foodexpress");
 
-// Notification Sound
-const notificationSound = new Audio("../assets/sounds/new-order.wav");
+    // Notification Sound
+    const notificationSound = new Audio("../assets/sounds/new-order.wav");
 
-let audioUnlocked = false;
+    let audioUnlocked = false;
 
-function unlockAudio() {
-    if (audioUnlocked) return;
+    function unlockAudio() {
+        if (audioUnlocked) return;
 
-    notificationSound.play()
-        .then(() => {
-            notificationSound.pause();
-            notificationSound.currentTime = 0;
-            audioUnlocked = true;
-            console.log("✅ Audio Unlocked");
-        })
-        .catch(err => console.log(err));
-}
-
-document.addEventListener("click", unlockAudio, {
-    once: true
-});
-
-// 🔊 Voice Function
-function speakNewOrder() {
-
-    const msg = new SpeechSynthesisUtterance();
-
-    msg.text = "New order received";
-
-    msg.lang = "en-US";
-
-    msg.rate = 1;
-
-    msg.pitch = 1;
-
-    window.speechSynthesis.speak(msg);
-}
-
-channel.bind("new-order", function(data) {
-
-    console.log("New Order:", data);
-
-    if (audioUnlocked) {
-
-        notificationSound.currentTime = 0;
-        notificationSound.play();
-
-        speakNewOrder();
+        notificationSound.play()
+            .then(() => {
+                notificationSound.pause();
+                notificationSound.currentTime = 0;
+                audioUnlocked = true;
+                console.log("✅ Audio Unlocked");
+            })
+            .catch(err => console.log(err));
     }
 
-    load_data();
-});
-
-function load_data() {
-    $.ajax({
-        url: "fetch_dashboard.php",
-        type: "POST",
-        data: { recent_order: true },
-        success: function(data) {
-            $("#recent_order").html(data);
-        }
+    document.addEventListener("click", unlockAudio, {
+        once: true
     });
-}
 
-$(document).ready(function() {
-    load_data();
-});
+    // 🔊 Voice Function
+    function speakNewOrder() {
+
+        const msg = new SpeechSynthesisUtterance();
+
+        msg.text = "New order received";
+
+        msg.lang = "en-US";
+
+        msg.rate = 1;
+
+        msg.pitch = 1;
+
+        window.speechSynthesis.speak(msg);
+    }
+
+    channel.bind("new-order", function(data) {
+
+        console.log("New Order:", data);
+
+        if (audioUnlocked) {
+
+            notificationSound.currentTime = 0;
+            notificationSound.play();
+
+            speakNewOrder();
+        }
+
+        load_data();
+    });
+
+    function load_data() {
+        $.ajax({
+            url: "fetch_dashboard.php",
+            type: "POST",
+            data: {
+                recent_order: true
+            },
+            success: function(data) {
+                $("#recent_order").html(data);
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        load_data();
+    });
+
+
+    // ============================
+    // Process Order
+    // ============================
+    $(document).on("click", ".btn-process", function() {
+
+        let order_id = $(this).data("id");
+
+        if (!confirm("Start processing this order?")) {
+            return;
+        }
+
+        $.ajax({
+            url: "action_online_order.php",
+            type: "POST",
+            data: {
+                process_order: true,
+                order_id: order_id
+            },
+            success: function(response) {
+                load_data();
+
+            }
+        });
+
+    });
+
+
+    // ============================
+    // Complete Order
+    // ============================
+    $(document).on("click", ".btn-complete", function() {
+        let order_id = $(this).data("id");
+
+        if (!confirm("Mark this order as completed?")) {
+            return;
+        }
+
+        $.ajax({
+            url: "action_online_order.php",
+            type: "POST",
+            data: {
+                complete_order: true,
+                order_id: order_id
+            },
+            success: function(response) {
+                load_data();
+            }
+        });
+
+    });
+
+
+    // ============================
+    // Cancel Order
+    // ============================
+    $(document).on("click", ".btn-cancel", function() {
+
+        let order_id = $(this).data("id");
+
+        if (!confirm("Are you sure you want to cancel this order?")) {
+            return;
+        }
+
+        $.ajax({
+            url: "action_online_order.php",
+            type: "POST",
+            data: {
+                cancel_order: true,
+                order_id: order_id
+            },
+            success: function(response) {
+                load_data();
+            },
+        });
+
+    });
+
+
+    // ============================
+    // View Order
+    // ============================
+    $(document).on("click", ".btn-view", function() {
+
+        let order_id = $(this).data("id");
+
+        window.location.href = "order_details.php?id=" + order_id;
+
+    });
 </script>
 
 <script>

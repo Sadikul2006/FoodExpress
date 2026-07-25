@@ -1,83 +1,149 @@
 <?php
+
 include '../config/database_connection.php';
-session_start();
+include '../config/pusher.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 header("Content-Type: application/json");
 
-$restaurant_id = $_SESSION['admin_id'] ?? 1;
+// ===========================
+// Check Admin Login
+// ===========================
+if (!isset($_SESSION['admin_id'])) {
+    echo json_encode([
+        "type" => "error",
+        "msg" => "Unauthorized access!"
+    ]);
+    exit();
+}
 
-$min_order_amount = $_POST['min_order_amount'] ?? 0;
-$delivery_fee = $_POST['delivery_fee'] ?? 0;
-$delivery_radius = $_POST['delivery_radius'] ?? 0;
-$prep_time = $_POST['prep_time'] ?? 45;
-$enable_ordering = isset($_POST['enable_ordering']) ? 1 : 0;
-$opening_time = $_POST['opening_time'] ?? '09:00';
-$closing_time = $_POST['closing_time'] ?? '22:00';
+$restaurant_id = (int) $_SESSION['admin_id'];
 
-$response = ["type" => "error", "msg" => "Something went wrong!"];
+// ===========================
+// Validate Order ID
+// ===========================
+if (!isset($_POST['order_id']) || !is_numeric($_POST['order_id'])) {
+    echo json_encode([
+        "type" => "error",
+        "msg" => "Invalid Order ID."
+    ]);
+    exit();
+}
 
-// Check if settings exists
-$result = $conn->query("SELECT id FROM restaurant_settings WHERE restaurant_id = $restaurant_id");
+$order_id = (int) $_POST['order_id'];
 
-if ($result->num_rows > 0) {
+// ===========================
+// Determine Action
+// ===========================
+$actions = [
+    'process_order'  => 'Processing',
+    'complete_order' => 'Completed',
+    'cancel_order'   => 'Cancelled'
+];
 
-    // UPDATE
-    $stmt = $conn->prepare("UPDATE restaurant_settings 
-        SET min_order_amount=?, delivery_fee=?, delivery_radius=?, preparation_time=?, enable_ordering=?, opening_time=?, closing_time=? 
-        WHERE restaurant_id=?");
+$status = null;
 
-    if (!$stmt) {
-        echo json_encode(['type' => 'error', 'msg' => 'Prepare failed: '.$conn->error]);
-        exit();
-    }
-
-    $stmt->bind_param("dddiissi",
-        $min_order_amount,
-        $delivery_fee,
-        $delivery_radius,
-        $prep_time,
-        $enable_ordering,
-        $opening_time,
-        $closing_time,
-        $restaurant_id
-    );
-
-    if ($stmt->execute()) {
-        $response = ['type' => 'success', 'msg' => 'Settings updated successfully!'];
-    } else {
-        $response = ['type' => 'error', 'msg' => 'Update failed: '.$stmt->error];
-    }
-
-} else {
-
-    // INSERT
-    $stmt = $conn->prepare("INSERT INTO restaurant_settings 
-        (restaurant_id, min_order_amount, delivery_fee, delivery_radius, preparation_time, enable_ordering, opening_time, closing_time) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-
-    if (!$stmt) {
-        echo json_encode(['type' => 'error', 'msg' => 'Prepare failed: '.$conn->error]);
-        exit();
-    }
-
-    $stmt->bind_param("idddisss",
-        $restaurant_id,
-        $min_order_amount,
-        $delivery_fee,
-        $delivery_radius,
-        $prep_time,
-        $enable_ordering,
-        $opening_time,
-        $closing_time
-    );
-
-    if ($stmt->execute()) {
-        $response = ['type' => 'success', 'msg' => 'Settings saved successfully!'];
-    } else {
-        $response = ['type' => 'error', 'msg' => 'Insert failed: '.$stmt->error];
+foreach ($actions as $action => $value) {
+    if (isset($_POST[$action])) {
+        $status = $value;
+        break;
     }
 }
 
-echo json_encode($response);
+if ($status === null) {
+    echo json_encode([
+        "type" => "error",
+        "msg" => "Invalid action."
+    ]);
+    exit();
+}
+
+// ===========================
+// Check Order Exists
+// ===========================
+$check = $conn->prepare("
+    SELECT id
+    FROM orders
+    WHERE id = ? AND restaurant_id = ?
+");
+
+$check->bind_param("ii", $order_id, $restaurant_id);
+$check->execute();
+
+$result = $check->get_result();
+
+if ($result->num_rows === 0) {
+
+    $check->close();
+
+    echo json_encode([
+        "type" => "error",
+        "msg" => "Order not found."
+    ]);
+
+    exit();
+}
+
+$check->close();
+
+// ===========================
+// Update Order Status
+// ===========================
+$stmt = $conn->prepare("
+    UPDATE orders
+    SET status = ?
+    WHERE id = ? AND restaurant_id = ?
+");
+
+$stmt->bind_param(
+    "sii",
+    $status,
+    $order_id,
+    $restaurant_id
+);
+
+if ($stmt->execute() && $stmt->affected_rows > 0) {
+
+    // ===========================
+    // Send Pusher Notification
+    // ===========================
+    try {
+
+        $pusher->trigger(
+            'foodexpress',
+            'order-status-updated',
+            [
+                'order_id' => $order_id,
+                'status' => $status
+            ]
+        );
+
+    } catch (Exception $e) {
+
+        error_log("Pusher Error: " . $e->getMessage());
+
+    }
+
+    echo json_encode([
+        "type" => "success",
+        "msg" => "Order status updated successfully.",
+        "status" => $status,
+        "order_id" => $order_id
+    ]);
+
+} else {
+
+    echo json_encode([
+        "type" => "error",
+        "msg" => "Failed to update order."
+    ]);
+
+}
+
+$stmt->close();
+$conn->close();
+
 exit();
-?>

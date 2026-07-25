@@ -66,23 +66,23 @@ if (isset($_POST['recent_order'])) {
                 <td>₹' . htmlspecialchars($total) . '</td>
                 <td><span class="order-status status-' . $st_color . '">' . htmlspecialchars($status) . '</span></td>
                 <td>
-                    <button class="action-btn btn-view">
+                    <button class="action-btn btn-view" data-id="' . $order_id . '">
                         <i class="fas fa-eye"></i> View
                     </button>';
 
             if ($status === "Processing") {
                 echo '
-                    <button class="action-btn btn-complete">
+                    <button class="action-btn btn-complete" data-id="' . $order_id . '">
                         <i class="fas fa-check"></i> Complete
                     </button>';
             }
 
             if ($status === "Pending") {
                 echo '
-                    <button class="action-btn btn-process">
+                    <button class="action-btn btn-process" data-id="' . $order_id . '">
                         <i class="fas fa-spinner"></i> Process
                     </button>
-                    <button class="action-btn btn-cancel">
+                    <button class="action-btn btn-cancel" data-id="' . $order_id . '">
                         <i class="fas fa-times"></i> Cancel
                     </button>';
             }
