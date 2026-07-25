@@ -437,6 +437,7 @@ if ($result) {
         if (!confirm("Are you sure you want to cancel this order?")) {
             return;
         }
+        
 
         $.ajax({
             url: "action_online_order.php",
