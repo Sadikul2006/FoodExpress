@@ -177,12 +177,13 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
 
                             if ($item_result->num_rows > 0) {
                                 $item_row = $item_result->fetch_assoc();
+                                $final_price = $item_row['price'] - ($item_row['price'] * $item_row['discount'] / 100);
                                 echo '
                                 <div class="cart-item" id="item-' . $row['item_id'] . '">
                                     <img src="admin/' . htmlspecialchars($item_row['image']) . '" alt="' . htmlspecialchars($item_row['name']) . '" class="item-image">
                                     <div class="item-details">
                                         <div class="item-name">' . htmlspecialchars($item_row['name']) . '</div>
-                                        <div class="item-price">₹' . number_format($item_row['price'], 2) . '</div>
+                                        <div class="item-price">₹' . number_format($final_price, 2) . '</div>
                                         <div class="display">
                                             <div class="quantity-control"> 
                                                 <button type="button" class="quantity-btn minus" data-id="' . $row['item_id'] . '" data-action="decrease">-</button>

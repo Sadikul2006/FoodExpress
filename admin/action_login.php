@@ -98,7 +98,7 @@ if ($action === 'login') {
     $_SESSION['restaurant_id'] = $admin['restaurant_id'];
     $_SESSION['admin_name'] = $admin['name'];
 
-    echo "<script>alert('Login Successful!'); window.location='dashboard.php';</script>";
+    echo "<script>window.location='dashboard.php';</script>";
     exit();
 }
 

@@ -34,6 +34,7 @@ $result = $stmt->get_result();
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
+        $final_price = $row['price'] - ($row['price'] * $row['discount'] / 100);
         echo '
         <div class="menu-item ' . ($row['status'] == 'available' ? '' : 'unavailable') . '">
             <div class="image-container">';
@@ -58,10 +59,10 @@ if ($result && $result->num_rows > 0) {
                 <div class="item-footer">
                     <div>';
                         if ($row['discount'] > 0) {
-                            echo '<p class="old_price">₹' . number_format($row['old_price'], 0) . '</p>';
+                            echo '<p class="old_price">₹' . number_format($row['price'], 0) . '</p>';
                         }
                         echo '
-                        <div class="item-price">₹' . number_format($row['price'], 0) . '</div>
+                        <div class="item-price">₹' . number_format($final_price, 0) . '</div>
                     </div>
                     <button class="add-btn" data-item-id="' . $row['id'] . '" data-user-id="' . $_SESSION['user_id'] . '" ' . ($row['status'] != 'available' ? 'disabled' : '') . '>+ Add</button>
                 </div>

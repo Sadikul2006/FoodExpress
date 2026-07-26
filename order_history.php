@@ -29,9 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['o
     $taxes        = floatval($_POST['taxes'] ?? 0);
     $delivery_fee = floatval($_POST['delivery_fee'] ?? 0);
     $total        = floatval($_POST['total'] ?? 0);
-    $instructions = isset($_POST['instructions']) && trim($_POST['instructions']) !== '' ? $conn->real_escape_string($_POST['instructions']) : 'No';
-
-
+    $instructions = trim($_POST['instructions'] ?? '');
+    if ($instructions === '') {
+        $instructions = "No";
+    }
     // Get user's default address
     $address_sql = "SELECT * FROM address WHERE user_id = ? AND is_default = 1 LIMIT 1";
     $address_stmt = $conn->prepare($address_sql);
@@ -62,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['o
             $stmt->close();
 
             // Get cart items
-            $cart_sql = "SELECT c.item_id, c.quantity, i.name, i.price, i.image, i.description
+            $cart_sql = "SELECT c.item_id, c.quantity, i.name, i.price, i.discount, i.image, i.description
                         FROM cart c
                         JOIN items i ON c.item_id = i.id
                         WHERE c.user_id = ? AND c.restaurant_id = ?";
@@ -76,14 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['o
                 $item_id   = $row['item_id'];
                 $qty       = $row['quantity'];
                 $price     = $row['price'];
+                $discount  = $row['discount'];
                 $item_name = $row['name'];
                 $item_img  = $row['image'];
                 $item_description  = $row['description'];
 
-                $item_sql = "INSERT INTO order_items (order_id, item_id, item_name, item_image, description, quantity, price) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $item_sql = "INSERT INTO order_items (order_id, item_id, item_name, item_image, description, quantity, price, discount) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 $item_stmt = $conn->prepare($item_sql);
-                $item_stmt->bind_param("iisssid", $order_id, $item_id, $item_name, $item_img, $item_description, $qty, $price);
+                $item_stmt->bind_param("iisssidi", $order_id, $item_id, $item_name, $item_img, $item_description, $qty, $price, $discount);
                 $item_stmt->execute();
                 $item_stmt->close();
             }
@@ -224,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['o
                                                 $item_name = $item_row['item_name'];
                                                 $item_description = $item_row['description'];
                                                 $item_img = $item_row['item_image'];
-                                                $item_price = $item_row['price'];
+                                                $item_price = $item_row['price'] - ($item_row['price'] * $item_row['discount'] / 100);
                                                 $item_qty = $item_row['quantity'];
                                         ?>
                                                 <tr>

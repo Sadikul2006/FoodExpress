@@ -81,7 +81,7 @@ $items_result = $items_stmt->get_result();
         <div class="order-header">
             <div style="display: flex; align-items: center; flex-wrap: wrap; gap:10px;">
                 <span class="order-id">Order #<?php echo $order_id + 1000; ?></span>
-                <span class="restaurant-name"><i class="fa-solid fa-utensils"></i> <?php echo $restaurant_name; ?></span>
+                <span class="restaurant-name"><i class="fa-solid fa-utensils"></i> <?= htmlspecialchars($restaurant_name) ?></span>
                 <span class="order-status status-<?php echo $status_class; ?>">
                     <?php if ($status == "Completed") { ?>
                         <i class="fas fa-check-circle"></i>
@@ -109,17 +109,18 @@ $items_result = $items_stmt->get_result();
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($item = $items_result->fetch_assoc()) { ?>
+                    <?php while ($item = $items_result->fetch_assoc()) { 
+                        $item_price = $item['price'] - ($item['price'] * $item['discount'] / 100);?>
                         <tr>
                             <td>
-                                <img src="/Restaurant/admin/<?php echo $item['item_image']; ?>" alt="<?php echo $item['item_name']; ?>" class="item-image">
+                                <img src="/Restaurant/admin/<?= htmlspecialchars($item['item_image']) ?>" alt="<?php echo $item['item_name']; ?>" class="item-image">
                             </td>
                             <td>
-                                <div class="item-name"><?php echo $item['item_name']; ?></div>
-                                <div class="item-description"><?php echo $item['description']; ?></div>
+                                <div class="item-name"><?= htmlspecialchars($item['item_name']) ?></div>
+                                <div class="item-description"><?= htmlspecialchars($item['description']) ?></div>
                             </td>
                             <td class="item-quantity"><?php echo $item['quantity']; ?></td>
-                            <td class="item-price">₹<?php echo $item['price']; ?></td>
+                            <td class="item-price">₹<?= number_format($item_price,2); ?></td>
                         </tr>
                     <?php } ?>
                 </tbody>
@@ -129,19 +130,19 @@ $items_result = $items_stmt->get_result();
         <div class="order-summary">
             <div class="summary-row">
                 <span class="summary-label">Subtotal</span>
-                <span class="summary-value">₹<?php echo $subtotal; ?></span>
+                <span class="summary-value">₹<?= number_format($subtotal,2) ?></span>
             </div>
             <div class="summary-row">
                 <span class="summary-label">Delivery Fee</span>
-                <span class="summary-value">₹<?php echo $delivery_fee; ?></span>
+                <span class="summary-value">₹<?= number_format($delivery_fee,2) ?></span>
             </div>
             <div class="summary-row">
                 <span class="summary-label">Taxes</span>
-                <span class="summary-value">₹<?php echo $taxes; ?></span>
+                <span class="summary-value">₹<?= number_format($taxes,2) ?></span>
             </div>
             <div class="summary-row total-row">
                 <span class="summary-label">Total</span>
-                <span class="summary-value">₹<?php echo $total; ?></span>
+                <span class="summary-value">₹<?= number_format($total,2) ?></span>
             </div>
         </div>
 
@@ -156,25 +157,31 @@ $items_result = $items_stmt->get_result();
                 <h3><i class="fas fa-map-marker-alt"></i> Delivery Address</h3>
                 <div class="instruction-box">
                     <?php
-                    $user_id = $_SESSION['user_id'];
-                    $sql = "SELECT * FROM address WHERE user_id = $user_id AND is_default = 1 LIMIT 1";
-                    $result = $conn->query($sql);
+                    $address_stmt = $conn->prepare(" SELECT * FROM address WHERE id = ? LIMIT 1");
 
-                    if ($result && $result->num_rows > 0) {
-                        $row = $result->fetch_assoc();
+                    $address_stmt->bind_param("i", $order['address_id']);
+                    $address_stmt->execute();
+
+                    $address_result = $address_stmt->get_result();
+
+                    if ($address_result->num_rows > 0) {
+
+                        $row = $address_result->fetch_assoc();
                     ?>
                         <div class="address-box">
                             <p class="address-text">
-                                <?php echo htmlspecialchars($row['name']); ?><br>
-                                <?php echo htmlspecialchars($row['street']); ?>,<br>
-                                <?php echo htmlspecialchars($row['city']); ?><br>
-                                <?php echo htmlspecialchars($row['phone']); ?>
+                                <?= htmlspecialchars($row['name']); ?><br>
+                                <?= htmlspecialchars($row['street']); ?><br>
+                                <?= htmlspecialchars($row['city']); ?><br>
+                                <?= htmlspecialchars($row['phone']); ?>
                             </p>
                         </div>
                     <?php
                     } else {
-                        echo "<p>No default address found.</p>";
+                        echo "<p>Address not found.</p>";
                     }
+
+                    $address_stmt->close();
                     ?>
 
                 </div>
@@ -190,7 +197,7 @@ $items_result = $items_stmt->get_result();
         </div>
     </div>
 
-    <?php include 'footer_nav.php'; ?>
+    <?php include 'includes/footer_nav.php'; ?>
 
 </body>
 

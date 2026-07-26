@@ -1,22 +1,48 @@
 <?php
-include '../config/database_connection.php';
-session_start();
 
-if (!isset($_GET['id'])) {
-    $_SESSION['error'] = "No item ID provided.";
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+include '../config/database_connection.php';
+
+if (!isset($_SESSION['admin_id'])) {
+    header("Location: index.php");
+    exit();
+}
+
+$restaurant_id = $_SESSION['admin_id'];
+
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    $_SESSION['error'] = "Invalid Item ID.";
     header("Location: menu.php");
     exit();
 }
 
-$id = $_GET['id'];
+$id = (int)$_GET['id'];
 
-// Step 1: Fetch existing item data securely
-$stmt = $conn->prepare("SELECT * FROM items WHERE id = ?");
-$stmt->bind_param("i", $id);
+/* Fetch Item */
+$stmt = $conn->prepare("
+    SELECT
+        id,
+        restaurant_id,
+        name,
+        description,
+        price,
+        discount,
+        category,
+        status,
+        image
+    FROM items
+    WHERE id = ? AND restaurant_id = ?
+");
+
+$stmt->bind_param("ii", $id, $restaurant_id);
 $stmt->execute();
+
 $result = $stmt->get_result();
 
-if ($result->num_rows != 1) {
+if ($result->num_rows !== 1) {
     $_SESSION['error'] = "Item not found.";
     header("Location: menu.php");
     exit();
@@ -25,39 +51,102 @@ if ($result->num_rows != 1) {
 $item = $result->fetch_assoc();
 $stmt->close();
 
-// Step 2: Handle form submission
+/* Calculate Final Price */
+$final_price = $item['price'] - ($item['price'] * $item['discount'] / 100);
+
+/* Update Item */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = $_POST['name'];
-    $status = $_POST['status'];
-    $description = $_POST['description'];
-    $price = $_POST['price'];
-    $category = $_POST['category'];
 
-    // Optional: Handle image update
-    $image = $item['image']; // default image
+    $name = trim($_POST['name']);
+    $description = trim($_POST['description']);
+    $category = trim($_POST['category']);
+    $status = trim($_POST['status']);
+
+    $price = floatval($_POST['price']);
+    $discount = intval($_POST['discount']);
+
+    if ($discount < 0) $discount = 0;
+    if ($discount > 100) $discount = 100;
+
+    $image = $item['image'];
+
     if (!empty($_FILES['image']['name'])) {
-        $image_name = time() . "_" . basename($_FILES['image']['name']);
-        $image_tmp = $_FILES['image']['tmp_name'];
-        $upload_path = "uploads/" . $image_name;
 
-        if (move_uploaded_file($image_tmp, $upload_path)) {
-            $image = $upload_path;
+        $allowed = ['jpg','jpeg','png','webp'];
+
+        $extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+
+        if (!in_array($extension, $allowed)) {
+
+            $_SESSION['error'] = "Only JPG, JPEG, PNG and WEBP images are allowed.";
+            header("Location: edit_category.php?id=".$id);
+            exit();
+
         }
+
+        $image_name = uniqid()."_".basename($_FILES['image']['name']);
+
+        $upload_path = "uploads/".$image_name;
+
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
+
+            if (!empty($item['image']) && file_exists($item['image'])) {
+                unlink($item['image']);
+            }
+
+            $image = $upload_path;
+
+        } else {
+
+            $_SESSION['error'] = "Image upload failed.";
+            header("Location: edit_category.php?id=".$id);
+            exit();
+
+        }
+
     }
 
-    // Step 3: Update item securely
-    $update_stmt = $conn->prepare("UPDATE items SET name = ?, category = ?, status = ?, description = ?, price = ?, image = ? WHERE id = ?");
-    $update_stmt->bind_param("ssssssi", $name, $category, $status, $description, $price, $image, $id);
+    $stmt = $conn->prepare("
+        UPDATE items
+        SET
+            name = ?,
+            category = ?,
+            status = ?,
+            description = ?,
+            price = ?,
+            discount = ?,
+            image = ?
+        WHERE id = ?
+        AND restaurant_id = ?
+    ");
 
-    if ($update_stmt->execute()) {
+    $stmt->bind_param(
+        "ssssddsii",
+        $name,
+        $category,
+        $status,
+        $description,
+        $price,
+        $discount,
+        $image,
+        $id,
+        $restaurant_id
+    );
+
+    if ($stmt->execute()) {
+
         $_SESSION['success'] = "Menu item updated successfully.";
+
         header("Location: menu.php");
         exit();
+
     } else {
-        $_SESSION['error'] = "Update failed: " . $update_stmt->error;
+
+        $_SESSION['error'] = "Update failed : ".$stmt->error;
+
     }
 
-    $update_stmt->close();
+    $stmt->close();
 }
 ?>
 
@@ -90,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="menu-price" class="form-label">Price (₹)</label>
                     <input type="number" id="menu-price" name="price" class="form-control"
                         min="0" step="0.01"
-                        value="<?= htmlspecialchars($item['old_price']) ?>" required>
+                        value="<?= htmlspecialchars($item['price']) ?>" required>
                 </div>
 
                 <div class="form-group half">
@@ -104,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="price-display">
                 <span class="original-price">₹<span id="original-price"><?= $item['price'] ?></span></span>
                 <span>→</span>
-                <span class="final-price">₹<span id="final-price"><?= $item['price'] ?></span></span>
+                <span class="final-price">₹<span id="final-price"><?= $final_price ?></span></span>
             </div>
 
             <div class="form-row">

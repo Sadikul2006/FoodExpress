@@ -269,3 +269,8 @@
 .empty-state .btn i {
     font-size: 12px;
 }
+
+.old_price {
+    font-size: 10px;
+    text-decoration: line-through;
+}
