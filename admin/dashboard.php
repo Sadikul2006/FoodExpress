@@ -457,13 +457,37 @@ if ($result) {
     // ============================
     // View Order
     // ============================
-    $(document).on("click", ".btn-view", function() {
+    $(document).on("click", ".btn-view", function () {
 
-        let order_id = $(this).data("id");
+    let btn = $(this);
+    let order_id = btn.data("id");
 
-        window.location.href = "order_details.php?id=" + order_id;
+    // Already opened -> close
+    if(btn.hasClass("opened")){
+        $(".order-details-row").remove();
+        btn.removeClass("opened");
+        return;
+    }
 
+    $(".order-details-row").remove();
+    $(".btn-view").removeClass("opened");
+
+    $.ajax({
+        url: "fetch_order_details.php",
+        type: "POST",
+        data: {
+            order_id: order_id
+        },
+        success: function(response){
+
+            btn.closest("tr").after(response);
+
+            btn.addClass("opened");
+
+        }
     });
+
+});
 </script>
 
 <script>

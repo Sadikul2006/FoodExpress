@@ -30,9 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['o
     $delivery_fee = floatval($_POST['delivery_fee'] ?? 0);
     $total        = floatval($_POST['total'] ?? 0);
     $instructions = trim($_POST['instructions'] ?? '');
-    if ($instructions === '') {
-        $instructions = "No";
-    }
+    
     // Get user's default address
     $address_sql = "SELECT * FROM address WHERE user_id = ? AND is_default = 1 LIMIT 1";
     $address_stmt = $conn->prepare($address_sql);

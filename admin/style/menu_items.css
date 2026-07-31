@@ -184,7 +184,9 @@
 /* Alerts */
 .alert {
     padding: 15px;
-    margin-bottom: 20px;
+    /* margin-bottom: 20px; */
+    margin-top: 30px;
+    margin-bottom: -30px;
     border-radius: 5px;
     color: white;
     display: flex;
@@ -268,6 +270,24 @@
 
 .empty-state .btn i {
     font-size: 12px;
+}
+
+.discount {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #e63946;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  clip-path: polygon(0 0, 100% 0, 100% 75%, 80% 100%, 60% 75%, 40% 100%, 20% 75%, 0 100%);
+  padding-bottom: 16px;
 }
 
 .old_price {

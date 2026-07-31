@@ -20,7 +20,15 @@ if (isset($_POST['restaurant_id']) && isset($_POST['category'])) {
         while ($row = $result->fetch_assoc()) {
             $final_price = $row['price'] - ($row['price'] * $row['discount'] / 100);
             echo '
-            <div class="menu-card">
+            <div class="menu-card"> ';
+                if ($row['discount'] > 0) {
+                    echo '
+                    <div class="discount">
+                        <span>' . htmlspecialchars($row['discount']) . '%</span>
+                        <span>OFF</span>
+                    </div>';
+                }
+                echo '
                 <img src="' . htmlspecialchars($row['image']) . '" alt="' . htmlspecialchars($row['name']) . '" class="menu-image">
                 <div class="menu-details">
                     <div class="menu-header">

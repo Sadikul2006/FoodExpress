@@ -124,7 +124,8 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['restaurant_id'])) {
 
             if ($item_result->num_rows > 0) {
                 $item_row = $item_result->fetch_assoc();
-                $subtotal += ($item_row['price'] * $item['quantity']);
+                $final_price = $item_row['price'] - ($item_row['price'] * $item_row['discount'] / 100);
+                $subtotal += ($final_price * $item['quantity']);
             }
             $item_stmt->close();
         }
