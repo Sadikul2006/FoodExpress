@@ -81,7 +81,7 @@ $user_id = $_SESSION['user_id'] ?? null;
 
     <div class="nav">
         <div class="logo-container">
-            <img src="images/logo.png" id="logo_img" alt="Restaurant Logo">
+            <img src="assets/images/logo.png" id="logo_img" alt="Restaurant Logo">
         </div>
 
         <div class="search-nav">

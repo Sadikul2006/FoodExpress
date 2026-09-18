@@ -4,6 +4,11 @@ header('Content-Type: application/json');
 
 include "config/database_connection.php";
 
+require 'vendor/autoload.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
 // PHPMailer files
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -46,8 +51,8 @@ try {
     $mail->isSMTP();
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
-    $mail->Username   = 'sadikulseikh56@gmail.com';
-    $mail->Password   = 'aokw eprt fxzs ehxt';
+    $mail->Username = $_ENV['MAIL_USERNAME'];
+    $mail->Password = $_ENV['MAIL_PASSWORD'];
     $mail->SMTPSecure = 'tls';
     $mail->Port       = 587;
 

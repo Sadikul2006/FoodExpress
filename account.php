@@ -218,8 +218,9 @@ if ($result->num_rows > 0) {
             </div>
         </div>
 
-        <a href="action_login_register.php?logout">
-            <button class="logout-btn">
+        <a href="action_login_register.php?logout"
+        onclick="return confirm('Are you sure you want to logout?');">
+            <button type="button" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </button>
         </a>
