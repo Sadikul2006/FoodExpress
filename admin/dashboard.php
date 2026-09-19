@@ -376,118 +376,99 @@ if ($result) {
 
 
     // ============================
-    // Process Order
+    // Process / Complete / Cancel 
     // ============================
-    $(document).on("click", ".btn-process", function() {
+    $(document).on("click", ".btn-process, .btn-complete, .btn-cancel", function(e) {
+        e.preventDefault();
 
-        let order_id = $(this).data("id");
+        const $btn = $(this);
+        const orderId = $btn.data("id");
+        let action = "";
+        let label = "";
 
-        if (!confirm("Start processing this order?")) {
+        if ($btn.hasClass("btn-process")) {
+            action = "process_order";
+            label = "Start processing this order?";
+        } else if ($btn.hasClass("btn-complete")) {
+            action = "complete_order";
+            label = "Mark this order as completed?";
+        } else if ($btn.hasClass("btn-cancel")) {
+            action = "cancel_order";
+            label = "Are you sure you want to cancel this order?";
+        }
+
+        if (!orderId || !action) {
+            console.warn("Missing orderId or action", {
+                orderId,
+                action
+            });
             return;
         }
 
+        if (!confirm(label)) return;
+
+        $btn.prop("disabled", true);
+
         $.ajax({
             url: "action_online_order.php",
-            type: "POST",
+            method: "POST",
+            dataType: "json",
             data: {
-                process_order: true,
-                order_id: order_id
+                order_id: orderId,
+                [action]: true // sends { process_order: true } OR { complete_order: true } OR { cancel_order: true }
             },
-            success: function(response) {
-                load_data();
-
+            success: function(res) {
+                // server returns "type" (not "status")
+                if (res && res.type === "success") {
+                    load_data(); // ✅ your existing reload function
+                } else {
+                    alert((res && res.msg) || "Failed to update.");
+                }
+                $btn.prop("disabled", false);
+            },
+            error: function(xhr) {
+                const res = xhr.responseJSON || {};
+                alert(res.msg || "Request failed.");
+                $btn.prop("disabled", false);
             }
         });
-
-    });
-
-
-    // ============================
-    // Complete Order
-    // ============================
-    $(document).on("click", ".btn-complete", function() {
-        let order_id = $(this).data("id");
-
-        if (!confirm("Mark this order as completed?")) {
-            return;
-        }
-
-        $.ajax({
-            url: "action_online_order.php",
-            type: "POST",
-            data: {
-                complete_order: true,
-                order_id: order_id
-            },
-            success: function(response) {
-                load_data();
-            }
-        });
-
-    });
-
-
-    // ============================
-    // Cancel Order
-    // ============================
-    $(document).on("click", ".btn-cancel", function() {
-
-        let order_id = $(this).data("id");
-
-        if (!confirm("Are you sure you want to cancel this order?")) {
-            return;
-        }
-        
-
-        $.ajax({
-            url: "action_online_order.php",
-            type: "POST",
-            data: {
-                cancel_order: true,
-                order_id: order_id
-            },
-            success: function(response) {
-                load_data();
-            },
-        });
-
     });
 
 
     // ============================
     // View Order
     // ============================
-    $(document).on("click", ".btn-view", function () {
+    $(document).on("click", ".btn-view", function() {
 
-    let btn = $(this);
-    let order_id = btn.data("id");
+        let btn = $(this);
+        let order_id = btn.data("id");
 
-    // Already opened -> close
-    if(btn.hasClass("opened")){
-        $(".order-details-row").remove();
-        btn.removeClass("opened");
-        return;
-    }
-
-    $(".order-details-row").remove();
-    $(".btn-view").removeClass("opened");
-
-    $.ajax({
-        url: "fetch_order_details.php",
-        type: "POST",
-        data: {
-            order_id: order_id
-        },
-        success: function(response){
-
-            btn.closest("tr").after(response);
-
-            btn.addClass("opened");
-
+        // Already opened -> close
+        if (btn.hasClass("opened")) {
+            $(".order-details-row").remove();
+            btn.removeClass("opened");
+            return;
         }
-    });
 
-});
+        $(".order-details-row").remove();
+        $(".btn-view").removeClass("opened");
+
+        $.ajax({
+            url: "fetch_order_details.php",
+            type: "POST",
+            data: {
+                order_id: order_id
+            },
+            success: function(response) {
+
+                btn.closest("tr").after(response);
+
+                btn.addClass("opened");
+
+            }
+        });
+
+    });
 </script>
 
 <script>

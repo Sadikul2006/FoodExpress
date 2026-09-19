@@ -388,6 +388,146 @@ $restaurant_id = $_SESSION['admin_id'];
                 flex-wrap: wrap;
             }
         }
+
+
+
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pagination .page-btn {
+            min-width: 38px;
+            height: 38px;
+            padding: 0 10px;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pagination .page-btn:hover:not(:disabled) {
+            background: #f5f5f5;
+            border-color: #bbb;
+        }
+
+        .pagination .page-btn.active {
+            background: #e63946;
+            /* match your theme */
+            color: #fff;
+            border-color: #e63946;
+        }
+
+        .pagination .page-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-ellipsis {
+            padding: 0 6px;
+            color: #888;
+            user-select: none;
+        }
+
+
+        .details-wrapper {
+            display: flex;
+            gap: 25px;
+            align-items: flex-start;
+        }
+
+        .items-section {
+            flex: 2;
+        }
+
+        .summary-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .summary-card {
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .summary-card h4 {
+            margin: 0 0 15px;
+            font-size: 17px;
+        }
+
+        .summary-card p {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .grand-total {
+            color: #16a34a;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: #f8fafc;
+            padding: 12px;
+        }
+
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        .item-img {
+            width: 55px;
+            height: 55px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        .table del {
+            color: #999;
+            font-size: 13px;
+        }
+
+        .price-green {
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        @media(max-width:992px) {
+
+            .details-wrapper {
+                flex-direction: column;
+            }
+
+            .items-section,
+            .summary-section {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -398,10 +538,10 @@ $restaurant_id = $_SESSION['admin_id'];
     <div class="main-content">
         <div class="header">
             <h1>Order Management</h1>
-            <div class="user-profile">
+            <!-- <div class="user-profile">
                 <img src="uploads/<?php echo $_SESSION['restaurant_logo']; ?>" alt="User Profile">
                 <span><?php echo $_SESSION['admin_name']; ?></span>
-            </div>
+            </div> -->
         </div>
 
         <!-- Order Filters -->
@@ -470,42 +610,170 @@ $restaurant_id = $_SESSION['admin_id'];
         </div>
     </div>
 
-    <!-- ✅ jQuery for AJAX -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
         $(document).ready(function() {
-            // Load orders dynamically
-            function loadOrders(status = "All") {
+
+            let currentStatus = "All";
+            let currentPage = 1;
+
+            // ============================
+            // Load orders (single source of truth)
+            // ============================
+            function loadOrders(status, page) {
+                currentStatus = (status !== undefined && status !== null) ? status : currentStatus;
+                currentPage = (page !== undefined && page !== null) ? page : 1;
+
                 $.ajax({
                     url: "fetch_orders.php",
                     method: "POST",
+                    dataType: "html",
                     data: {
-                        status: status,
-                        restaurant_id: "<?php echo $restaurant_id; ?>"
+                        status: currentStatus,
+                        page: currentPage
                     },
                     beforeSend: function() {
-                        $("#order-table-container").html('<p style="text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading...</p>');
+                        $("#order-table-container").html(
+                            '<p style="text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading...</p>'
+                        );
                     },
                     success: function(data) {
                         $("#order-table-container").html(data);
                     },
                     error: function() {
-                        $("#order-table-container").html('<p style="color:red; text-align:center;">Failed to load data.</p>');
+                        $("#order-table-container").html(
+                            '<p style="color:red;text-align:center;">Failed to load data.</p>'
+                        );
                     }
                 });
             }
 
-            loadOrders();
+            // Initial load
+            loadOrders("All", 1);
 
-            // Filter button click
-            $(".filter-btn").click(function() {
+            // ============================
+            // Status filter
+            // ============================
+            $(document).on("click", ".filter-btn", function() {
                 $(".filter-btn").removeClass("active").addClass("inactive");
                 $(this).addClass("active").removeClass("inactive");
-                const status = $(this).data("status");
-                loadOrders(status);
+                loadOrders($(this).data("status"), 1);
             });
+
+            // ============================
+            // Pagination (event delegation)
+            // ============================
+            $(document).on("click", ".pagination .page-btn", function(e) {
+                e.preventDefault();
+                if ($(this).prop("disabled")) return;
+
+                const page = parseInt($(this).data("page"), 10);
+                if (isNaN(page) || page < 1) return;
+
+                loadOrders(currentStatus, page);
+            });
+
+            // ============================
+            // View order → inline row expansion
+            // ============================
+            $(document).on("click", ".btn-view", function() {
+                const $btn = $(this);
+                const orderId = $btn.data("order-id"); // ✅ matches PHP
+
+                if (!orderId) return;
+
+                // toggle: if already open, close
+                if ($btn.hasClass("opened")) {
+                    $(".order-details-row").remove();
+                    $(".btn-view").removeClass("opened");
+                    return;
+                }
+
+                // close any other open row
+                $(".order-details-row").remove();
+                $(".btn-view").removeClass("opened");
+                $btn.addClass("opened");
+
+                $.ajax({
+                    url: "fetch_order_details.php",
+                    method: "POST",
+                    dataType: "html",
+                    data: {
+                        order_id: orderId
+                    },
+                    success: function(html) {
+                        $btn.closest("tr").after(html);
+                    },
+                    error: function() {
+                        alert("Failed to load order details.");
+                        $btn.removeClass("opened");
+                    }
+                });
+            });
+
+            // ============================
+            // Process / Complete / Cancel — single unified handler
+            // ============================
+            $(document).on("click", ".btn-process, .btn-complete, .btn-cancel", function(e) {
+                e.preventDefault();
+
+                const $btn = $(this);
+                const orderId = $btn.data("order-id");
+                let action = "";
+                let label = "";
+
+                if ($btn.hasClass("btn-process")) {
+                    action = "process_order";
+                    label = "Start processing this order?";
+                } else if ($btn.hasClass("btn-complete")) {
+                    action = "complete_order";
+                    label = "Mark this order as completed?";
+                } else if ($btn.hasClass("btn-cancel")) {
+                    action = "cancel_order";
+                    label = "Are you sure you want to cancel this order?";
+                }
+
+                if (!orderId || !action) {
+                    console.warn("Missing orderId or action");
+                    return;
+                }
+
+                if (!confirm(label)) return;
+
+                $btn.prop("disabled", true);
+
+                $.ajax({
+                    url: "action_online_order.php",
+                    method: "POST",
+                    dataType: "json",
+                    data: {
+                        order_id: orderId,
+                        [action]: true 
+                    },
+                    success: function(res) {
+                        // ✅ server returns "type", not "status"
+                        if (res && res.type === "success") {
+                            loadOrders(currentStatus, currentPage);
+                        } else {
+                            alert((res && res.msg) || "Failed to update.");
+                            $btn.prop("disabled", false);
+                        }
+                    },
+                    error: function(xhr) {
+                        const res = xhr.responseJSON || {};
+                        alert(res.msg || "Request failed.");
+                        $btn.prop("disabled", false);
+                    }
+                });
+            });
+
         });
+
+        function closeOrderModal() {
+            document.getElementById("orderModal").style.display = "none";
+        }
     </script>
 </body>
+
 </html>

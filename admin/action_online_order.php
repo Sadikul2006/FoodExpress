@@ -1,17 +1,11 @@
 <?php
-
 include '../config/database_connection.php';
 include '../config/pusher.php';
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 header("Content-Type: application/json");
 
-// ===========================
-// Check Admin Login
-// ===========================
 if (!isset($_SESSION['admin_id'])) {
     echo json_encode([
         "type" => "error",

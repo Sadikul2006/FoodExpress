@@ -83,11 +83,11 @@ echo '
 
 ';
 
-mysqli_data_seek($result,0);
+mysqli_data_seek($result, 0);
 
-while($row=$result->fetch_assoc()){
+while ($row = $result->fetch_assoc()) {
 
-    $final_price=$row['price']-($row['price']*$row['discount']/100);
+    $final_price = $row['price'] - ($row['price'] * $row['discount'] / 100);
 
     echo '
 
@@ -96,47 +96,45 @@ while($row=$result->fetch_assoc()){
 <td>
 
 <img
-src="'.htmlspecialchars($row['item_image']).'"
+src="' . htmlspecialchars($row['item_image']) . '"
 class="item-img">
 
 </td>
 
 <td>
 
-<b>'.htmlspecialchars($row['item_name']).'</b><br>
+<b>' . htmlspecialchars($row['item_name']) . '</b><br>
 
 <small>
-'.htmlspecialchars($row['description']).'
+' . htmlspecialchars($row['description']) . '
 </small>
 
 </td>
 
-<td>'.$row['quantity'].'</td>
+<td>' . $row['quantity'] . '</td>
 
 <td>';
 
-    if($row['discount']>0){
+    if ($row['discount'] > 0) {
 
         echo '
 
-<del>₹'.number_format($row['price'],2).'</del><br>
+<del>₹' . number_format($row['price'], 2) . '</del><br>
 
 <span class="price-green">
 
-₹'.number_format($final_price,2).'
+₹' . number_format($final_price, 2) . '
 
 </span>
 
 ';
-
-    }else{
+    } else {
 
         echo '
 
-₹'.number_format($row['price'],2).'
+₹' . number_format($row['price'], 2) . '
 
 ';
-
     }
 
     echo '
@@ -146,7 +144,6 @@ class="item-img">
 </tr>
 
 ';
-
 }
 
 echo '
@@ -165,37 +162,37 @@ echo '
 
 <p>
 <span>Subtotal</span>
-<span>₹'.number_format($order['subtotal'],2).'</span>
+<span>₹' . number_format($order['subtotal'], 2) . '</span>
 </p>
 
 <p>
 <span>Delivery Fee</span>
-<span>₹'.number_format($order['delivery_fee'],2).'</span>
+<span>₹' . number_format($order['delivery_fee'], 2) . '</span>
 </p>
 
 <p>
 <span>Taxes</span>
-<span>₹'.number_format($order['taxes'],2).'</span>
+<span>₹' . number_format($order['taxes'], 2) . '</span>
 </p>
 
 <hr>
 
 <p class="grand-total">
 <span>Total</span>
-<span>₹'.number_format($order['total'],2).'</span>
+<span>₹' . number_format($order['total'], 2) . '</span>
 </p>
 
 </div> ';
-if($order['instructions'] != '') {
+if ($order['instructions'] != '') {
     echo '
     <div class="summary-card">
         <h4>Instruction</h4>
-        <p>'.$order['instructions'].'</p>
+        <p>' . $order['instructions'] . '</p>
     </div>';
 }
-if($address){
+if ($address) {
 
-echo '
+    echo '
 
 <div class="summary-card">
 
@@ -203,20 +200,19 @@ echo '
 
 <p>
 
-'.htmlspecialchars($address['name']).'<br>
+' . htmlspecialchars($address['name']) . '<br>
 
-'.htmlspecialchars($address['street']).'<br>
+' . htmlspecialchars($address['street']) . '<br>
 
-'.htmlspecialchars($address['city']).'<br>
+' . htmlspecialchars($address['city']) . '<br>
 
-'.htmlspecialchars($address['phone']).'
+' . htmlspecialchars($address['phone']) . '
 
 </p>
 
 </div>
 
 ';
-
 }
 
 echo '
@@ -236,5 +232,3 @@ echo '
 $stmt->close();
 $address_stmt->close();
 $conn->close();
-
-?>
