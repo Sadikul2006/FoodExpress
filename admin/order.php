@@ -696,7 +696,7 @@ $restaurant_id = $_SESSION['admin_id'];
                 $btn.addClass("opened");
 
                 $.ajax({
-                    url: "fetch_order_details.php",
+                    url: "view_order.php",
                     method: "POST",
                     dataType: "html",
                     data: {
@@ -744,7 +744,7 @@ $restaurant_id = $_SESSION['admin_id'];
                 $btn.prop("disabled", true);
 
                 $.ajax({
-                    url: "action_online_order.php",
+                    url: "order_status_update.php",
                     method: "POST",
                     dataType: "json",
                     data: {

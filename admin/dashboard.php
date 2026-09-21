@@ -359,7 +359,7 @@ if ($result) {
 
     function load_data() {
         $.ajax({
-            url: "fetch_dashboard.php",
+            url: "fetch_recent_order.php",
             type: "POST",
             data: {
                 recent_order: true
@@ -410,17 +410,16 @@ if ($result) {
         $btn.prop("disabled", true);
 
         $.ajax({
-            url: "action_online_order.php",
+            url: "order_status_update.php",
             method: "POST",
             dataType: "json",
             data: {
                 order_id: orderId,
-                [action]: true // sends { process_order: true } OR { complete_order: true } OR { cancel_order: true }
+                [action]: true
             },
             success: function(res) {
-                // server returns "type" (not "status")
                 if (res && res.type === "success") {
-                    load_data(); // ✅ your existing reload function
+                    load_data(); 
                 } else {
                     alert((res && res.msg) || "Failed to update.");
                 }
@@ -454,7 +453,7 @@ if ($result) {
         $(".btn-view").removeClass("opened");
 
         $.ajax({
-            url: "fetch_order_details.php",
+            url: "view_order.php",
             type: "POST",
             data: {
                 order_id: order_id

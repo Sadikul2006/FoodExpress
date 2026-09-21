@@ -1051,7 +1051,7 @@ admin@gourmet.com</textarea>
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             $.ajax({
-                url: "action_restaurant_info.php",
+                url: "update_restaurant_info.php",
                 type: "POST",
                 data: formData,
                 contentType: false,
@@ -1081,7 +1081,7 @@ admin@gourmet.com</textarea>
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             $.ajax({
-                url: "action_online_order.php",
+                url: "update_online_order_settings.php",
                 type: "POST",
                 data: formData,
                 contentType: false,
