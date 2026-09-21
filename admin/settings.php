@@ -43,6 +43,33 @@ $delivery_radius = $settings['delivery_radius'] ?? 0.00;
 $prep_time = $settings['preparation_time'] ?? 45;
 $enable_ordering = $settings['enable_ordering'] ?? 1;
 
+
+// Notification Settings — fetch
+$ens = [
+    'new_orders'          => 1,
+    'order_cancellations' => 0,
+    'new_reservations'    => 0,
+    'customer_reviews'    => 0,
+    'notification_emails' => ''
+];
+
+$restaurant_id = (int) $_SESSION['admin_id'];
+$stmt = $conn->prepare("
+    SELECT new_orders, order_cancellations, new_reservations,
+           customer_reviews, notification_emails
+    FROM notification_settings
+    WHERE restaurant_id = ?
+    LIMIT 1
+");
+$stmt->bind_param("i", $restaurant_id);
+$stmt->execute();
+$res = $stmt->get_result();
+
+if ($res->num_rows > 0) {
+    $ens = $res->fetch_assoc();
+}
+$stmt->close();
+
 ?>
 
 
@@ -190,6 +217,7 @@ $enable_ordering = $settings['enable_ordering'] ?? 1;
         .tab:hover {
             color: var(--primary);
         }
+
         .logout-btn {
             background: #f8f9fa;
             color: #dc3545;
@@ -611,6 +639,7 @@ $enable_ordering = $settings['enable_ordering'] ?? 1;
                     </div>
                 </form>
             </div>
+
             <!-- Online Ordering Settings -->
             <div class="settings-section" id="online-settings">
                 <form id="online-settings-form" action="action_online_order.php" method="POST">
@@ -677,55 +706,52 @@ $enable_ordering = $settings['enable_ordering'] ?? 1;
 
             <!-- Notifications Settings -->
             <div class="settings-section" id="notifications-settings">
-                <form>
+                <form id="notifications-settings-form" action="notification_settings.php" method="POST">
+
                     <div class="form-group">
                         <label class="form-label">Email Notifications</label>
+
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="new-orders" checked>
-                            <label for="new-orders">New orders</label>
+                            <input type="checkbox" class="form-check-input"
+                                id="new_orders" name="new_orders" value="1"
+                                <?= (!empty($ens['new_orders'])) ? 'checked' : '' ?>>
+                            <label for="new_orders">New orders</label>
                         </div>
+
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="cancellations" checked>
-                            <label for="cancellations">Order cancellations</label>
+                            <input type="checkbox" class="form-check-input"
+                                id="order_cancellations" name="order_cancellations" value="1"
+                                <?= (!empty($ens['order_cancellations'])) ? 'checked' : '' ?>>
+                            <label for="order_cancellations">Order cancellations</label>
                         </div>
+
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="reservations" checked>
-                            <label for="reservations">New reservations</label>
+                            <input type="checkbox" class="form-check-input"
+                                id="new_reservations" name="new_reservations" value="1"
+                                <?= (!empty($ens['new_reservations'])) ? 'checked' : '' ?>>
+                            <label for="new_reservations">New reservations</label>
                         </div>
+
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="reviews">
-                            <label for="reviews">Customer reviews</label>
+                            <input type="checkbox" class="form-check-input"
+                                id="customer_reviews" name="customer_reviews" value="1"
+                                <?= (!empty($ens['customer_reviews'])) ? 'checked' : '' ?>>
+                            <label for="customer_reviews">Customer reviews</label>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">SMS Notifications</label>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="sms-new-orders" checked>
-                            <label for="sms-new-orders">New orders</label>
-                        </div>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="sms-cancellations">
-                            <label for="sms-cancellations">Order cancellations</label>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Notification Email Addresses</label>
-                        <textarea class="form-control form-textarea">manager@gourmet.com
-admin@gourmet.com</textarea>
+                        <label class="form-label" for="notification_emails">Notification Email Addresses</label>
+                        <textarea id="notification_emails" name="notification_emails"
+                            class="form-control form-textarea"
+                            rows="4"
+                            placeholder="manager@example.com&#10;admin@example.com"><?= htmlspecialchars($ens['notification_emails'] ?? '') ?></textarea>
                         <small class="text-muted">Enter one email address per line</small>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">SMS Notification Numbers</label>
-                        <input type="text" class="form-control" value="+11234567890, +10987654321">
-                        <small class="text-muted">Separate numbers with commas</small>
-                    </div>
-
                     <div class="btn-group">
-                        <button type="button" class="btn btn-primary">Save Changes</button>
-                        <button type="button" class="btn btn-outline">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" class="btn btn-outline" id="notifications-cancel">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -1104,6 +1130,51 @@ admin@gourmet.com</textarea>
             });
         });
 
+
+        // notifications settings (AJAX)
+        document.getElementById('notifications-settings-form').addEventListener('submit', function(e) {
+
+            e.preventDefault();
+
+            const form = this;
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            $.ajax({
+                url: "notification_settings.php",
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                dataType: "json",
+
+                success: function(response) {
+
+                    let type = response.type || "error";
+                    let msg = response.msg || "Unknown response!";
+
+                    showNotification(msg, type);
+                },
+
+                error: function(xhr, status, error) {
+
+                    showNotification(
+                        "Something went wrong: " + error,
+                        "error"
+                    );
+                },
+
+                complete: function() {
+
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Save Changes';
+                }
+            });
+
+        });
 
 
         // =======================
