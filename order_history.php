@@ -3,135 +3,176 @@ session_start();
 include 'config/database_connection.php';
 include 'config/pusher.php';
 
+// Auth guard
 if (!isset($_SESSION['user_id'])) {
     header("Location: user_login_register.php");
     exit();
 }
 
-$user_id = $_SESSION['user_id'] ?? null;
-$restaurant_id  = $_SESSION['restaurant_id'] ?? null;
+$user_id         = $_SESSION['user_id'] ?? null;
+$restaurant_id   = $_SESSION['restaurant_id'] ?? null;
 $restaurant_name = $_SESSION['restaurant_name'] ?? null;
 
-// Handle AJAX order request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['order'] === 'confirm') {
+
+// Trigger order mail (background, fire & forget)
+
+function triggerOrderMail($order_id)
+{
+    $url = 'http://127.0.0.1/Restaurant/send_order_mail.php';
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => http_build_query(['order_id' => $order_id]),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 1,   
+        CURLOPT_NOSIGNAL       => 1,
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+// Handle order confirmation (AJAX)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['order'] ?? '') === 'confirm') {
+
     header('Content-Type: application/json');
 
     $response = ['status' => 'error', 'message' => 'Unknown error'];
 
-    // Validate required data
     if (!$user_id || !$restaurant_id) {
-        $response['message'] = 'User or restaurant not set';
-        echo json_encode($response);
+        echo json_encode(['status' => 'error', 'message' => 'User or restaurant not set']);
         exit();
     }
 
-    $subtotal     = floatval($_POST['subtotal'] ?? 0);
-    $taxes        = floatval($_POST['taxes'] ?? 0);
-    $delivery_fee = floatval($_POST['delivery_fee'] ?? 0);
-    $total        = floatval($_POST['total'] ?? 0);
+    // ---- Inputs ----
+    $subtotal     = (float) ($_POST['subtotal'] ?? 0);
+    $taxes        = (float) ($_POST['taxes'] ?? 0);
+    $delivery_fee = (float) ($_POST['delivery_fee'] ?? 0);
+    $total        = (float) ($_POST['total'] ?? 0);
     $instructions = trim($_POST['instructions'] ?? '');
-    
-    // Get user's default address
-    $address_sql = "SELECT * FROM address WHERE user_id = ? AND is_default = 1 LIMIT 1";
-    $address_stmt = $conn->prepare($address_sql);
-    $address_stmt->bind_param("i", $user_id);
-    $address_stmt->execute();
-    $address_result = $address_stmt->get_result();
-    $address = $address_result->fetch_assoc();
-    $address_stmt->close();
+
+    // ---- Default address ----
+    $addr_stmt = $conn->prepare("SELECT id FROM address WHERE user_id = ? AND is_default = 1 LIMIT 1");
+    $addr_stmt->bind_param("i", $user_id);
+    $addr_stmt->execute();
+    $address = $addr_stmt->get_result()->fetch_assoc();
+    $addr_stmt->close();
 
     if (!$address) {
-        $response['message'] = 'No default address found';
-        echo json_encode($response);
+        echo json_encode(['status' => 'error', 'message' => 'No default address found']);
         exit();
     }
 
-    // Start transaction
+    $address_id = (int) $address['id'];
+
+    // ---- Transaction ----
     $conn->begin_transaction();
 
     try {
-        // Insert into orders table with address and instructions
-        $sql = "INSERT INTO orders (user_id, restaurant_id, subtotal, taxes, delivery_fee, total, instructions, address_id, order_date, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'Pending')";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iiddddsi", $user_id, $restaurant_id, $subtotal, $taxes, $delivery_fee, $total, $instructions, $address['id']);
+        // Insert order
+        $stmt = $conn->prepare("
+            INSERT INTO orders 
+                (user_id, restaurant_id, subtotal, taxes, delivery_fee, total, instructions, address_id, order_date, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'Pending')
+        ");
+        $stmt->bind_param(
+            "iiddddsi",
+            $user_id, $restaurant_id, $subtotal, $taxes,
+            $delivery_fee, $total, $instructions, $address_id
+        );
 
-        if ($stmt->execute()) {
-            $order_id = $stmt->insert_id;
-            $stmt->close();
+        if (!$stmt->execute()) throw new Exception('Failed to create order');
 
-            // Get cart items
-            $cart_sql = "SELECT c.item_id, c.quantity, i.name, i.price, i.discount, i.image, i.description
-                        FROM cart c
-                        JOIN items i ON c.item_id = i.id
-                        WHERE c.user_id = ? AND c.restaurant_id = ?";
-            $cart_stmt = $conn->prepare($cart_sql);
-            $cart_stmt->bind_param("ii", $user_id, $restaurant_id);
-            $cart_stmt->execute();
-            $cart_result = $cart_stmt->get_result();
+        $order_id = $stmt->insert_id;
+        $stmt->close();
 
-            // Insert order items
-            while ($row = $cart_result->fetch_assoc()) {
-                $item_id   = $row['item_id'];
-                $qty       = $row['quantity'];
-                $price     = $row['price'];
-                $discount  = $row['discount'];
-                $item_name = $row['name'];
-                $item_img  = $row['image'];
-                $item_description  = $row['description'];
+        // Copy cart → order_items
+        $cart_stmt = $conn->prepare("
+            SELECT c.item_id, c.quantity, i.name, i.price, i.discount, i.image, i.description 
+            FROM cart c 
+            JOIN items i ON c.item_id = i.id 
+            WHERE c.user_id = ? AND c.restaurant_id = ?
+        ");
+        $cart_stmt->bind_param("ii", $user_id, $restaurant_id);
+        $cart_stmt->execute();
+        $cart_result = $cart_stmt->get_result();
 
-                $item_sql = "INSERT INTO order_items (order_id, item_id, item_name, item_image, description, quantity, price, discount) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                $item_stmt = $conn->prepare($item_sql);
-                $item_stmt->bind_param("iisssidi", $order_id, $item_id, $item_name, $item_img, $item_description, $qty, $price, $discount);
-                $item_stmt->execute();
-                $item_stmt->close();
-            }
-            $cart_stmt->close();
+        if ($cart_result->num_rows === 0) throw new Exception('Cart is empty');
 
-            // Clear cart
-            $delete_sql = "DELETE FROM cart WHERE user_id = ? AND restaurant_id = ?";
-            $delete_stmt = $conn->prepare($delete_sql);
-            $delete_stmt->bind_param("ii", $user_id, $restaurant_id);
-            $delete_stmt->execute();
-            $delete_stmt->close();
+        $item_stmt = $conn->prepare("
+            INSERT INTO order_items 
+                (order_id, item_id, item_name, item_image, description, quantity, price, discount) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
 
-            // Commit transaction
-            $conn->commit();
-
-            // Pusher event
-            $pusher->trigger(
-                'foodexpress',
-                'new-order',
-                [
-                    'order_id' => $order_id,
-                    'restaurant_id' => $restaurant_id,
-                    'user_id' => $user_id,
-                    'status' => 'Pending',
-                    'total' => $total
-                ]
+        while ($row = $cart_result->fetch_assoc()) {
+            $item_stmt->bind_param(
+                "iisssidi",
+                $order_id, $row['item_id'], $row['name'], $row['image'],
+                $row['description'], $row['quantity'], $row['price'], $row['discount']
             );
-
-            $response['status'] = 'success';
-            $response['message'] = 'Order placed successfully';
-            $response['order_id'] = $order_id;
-        } else {
-            throw new Exception("Failed to create order");
+            if (!$item_stmt->execute()) throw new Exception('Failed to insert order item');
         }
+
+        $item_stmt->close();
+        $cart_stmt->close();
+
+        // Clear cart
+        $del_stmt = $conn->prepare("DELETE FROM cart WHERE user_id = ? AND restaurant_id = ?");
+        $del_stmt->bind_param("ii", $user_id, $restaurant_id);
+        $del_stmt->execute();
+        $del_stmt->close();
+
+        // Commit
+        $conn->commit();
+
+        // Pusher notification
+        try {
+            $pusher->trigger('foodexpress', 'new-order', [
+                'order_id'      => $order_id,
+                'restaurant_id' => $restaurant_id,
+                'user_id'       => $user_id,
+                'status'        => 'Pending',
+                'total'         => $total
+            ]);
+        } catch (Exception $e) {
+            error_log("Pusher Error: " . $e->getMessage());
+        }
+
+        // Fire mail in background
+        triggerOrderMail($order_id);
+
+        $response = [
+            'status'   => 'success',
+            'message'  => 'Order placed successfully',
+            'order_id' => $order_id
+        ];
+
     } catch (Exception $e) {
-        // Rollback transaction on error
         $conn->rollback();
-        $response['message'] = 'Order failed: ' . $e->getMessage();
+        error_log("Order Error: " . $e->getMessage());
+        $response = ['status' => 'error', 'message' => 'Order failed: ' . $e->getMessage()];
     }
 
     echo json_encode($response);
     exit();
 }
 
-// Regular page load - show order history
+// ===========================
+// Fetch user's orders
+// ===========================
+$orders_stmt = $conn->prepare("
+    SELECT o.*, a.restaurant_name
+    FROM orders o
+    JOIN restaurant_info a ON o.restaurant_id = a.restaurant_id
+    WHERE o.user_id = ?
+    ORDER BY o.order_date DESC
+");
+$orders_stmt->bind_param("i", $user_id);
+$orders_stmt->execute();
+$orders_result = $orders_stmt->get_result();
 ?>
 
-<!-- <?php include 'navber.php' ?> -->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -139,16 +180,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['o
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order History</title>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/order.css">
 </head>
 
 <body>
+
+    <!-- Top nav -->
     <div class="nav">
         <a href="restaurant_menu.php" class="back-btn">
             <i class="fas fa-arrow-left"></i>
         </a>
+
         <h1 class="page-title">My Orders</h1>
+
         <div style="display: flex; gap: 10px;">
             <button class="action-btn btn-outline">
                 <i class="fas fa-filter"></i> Filter
@@ -156,133 +202,161 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order']) && $_POST['o
         </div>
     </div>
 
+    <!-- Orders container -->
     <div class="container">
-        <?php
-        $orders_stmt = $conn->prepare("SELECT o.*, a.restaurant_name 
-                                    FROM orders o
-                                    JOIN restaurant_info a ON o.restaurant_id = a.restaurant_id
-                                    WHERE o.user_id = ?
-                                    ORDER BY o.order_date DESC");
-        $orders_stmt->bind_param("i", $user_id);
-        $orders_stmt->execute();
-        $orders_result = $orders_stmt->get_result();
 
-        if ($orders_result->num_rows > 0) {
-            while ($order_row = $orders_result->fetch_assoc()) {
-                $order_id = $order_row['id'];
-                $subtotal = $order_row['subtotal'];
-                $delivery_fee = $order_row['delivery_fee'];
-                $taxes = $order_row['taxes'] ?? 0;
-                $total = $order_row['total'];
-                $date_time = date("M d, Y", strtotime($order_row['order_date']));
-                $status = $order_row['status'];
-                $restaurant_name = $order_row['restaurant_name'];
+        <?php if ($orders_result->num_rows > 0): ?>
 
-                $status_class = strtolower($status);
-        ?>
+            <?php while ($order_row = $orders_result->fetch_assoc()): ?>
+
+                <?php
+                    $order_id       = (int) $order_row['id'];
+                    $subtotal       = $order_row['subtotal'];
+                    $delivery_fee   = $order_row['delivery_fee'];
+                    $taxes          = $order_row['taxes'] ?? 0;
+                    $total          = $order_row['total'];
+                    $status         = $order_row['status'];
+                    $restaurant_nm  = $order_row['restaurant_name'];
+                    $status_class   = strtolower($status);
+                    $date_time      = date("M d, Y", strtotime($order_row['order_date']));
+                ?>
+
                 <div class="order-card">
+
+                    <!-- Header -->
                     <div class="order-header">
-                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap:10px;">
-                            <span class="restaurant-name"><i class="fa-solid fa-utensils"></i> <?php echo $restaurant_name; ?></span>
-                            <span class="order-status status-<?php echo $status_class; ?>">
-                                <?php if ($status == "Completed") { ?>
-                                    <i class="fas fa-check-circle"></i>
-                                <?php } elseif ($status == "Processing") { ?>
-                                    <i class="fas fa-spinner"></i>
-                                <?php } elseif ($status == "Cancelled") { ?>
-                                    <i class="fas fa-times-circle"></i>
-                                <?php } elseif ($status == "Pending") { ?>
-                                    <i class="fas fa-solid fa-clock"></i>
-                                <?php } ?>
-                                <?php echo $status; ?>
+                        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+
+                            <span class="restaurant-name">
+                                <i class="fa-solid fa-utensils"></i>
+                                <?= htmlspecialchars($restaurant_nm, ENT_QUOTES, 'UTF-8') ?>
                             </span>
-                            <span class="order-date"><?php echo $date_time; ?></span>
+
+                            <span class="order-status status-<?= $status_class ?>">
+                                <?php if ($status === "Completed"): ?>
+                                    <i class="fas fa-check-circle"></i>
+                                <?php elseif ($status === "Processing"): ?>
+                                    <i class="fas fa-spinner"></i>
+                                <?php elseif ($status === "Cancelled"): ?>
+                                    <i class="fas fa-times-circle"></i>
+                                <?php elseif ($status === "Pending"): ?>
+                                    <i class="fas fa-clock"></i>
+                                <?php endif; ?>
+                                <?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+
+                            <span class="order-date">
+                                <?= $date_time ?>
+                            </span>
                         </div>
                     </div>
+
+                    <!-- Body -->
                     <div class="order-body">
                         <div class="order-details">
                             <div class="order-items">
                                 <table class="item-list">
                                     <thead>
                                         <tr>
-                                            <th style="width: 70px;"></th>
+                                            <th style="width:70px;"></th>
                                             <th>Item</th>
                                             <th>Qty</th>
                                             <th>Price</th>
                                         </tr>
                                     </thead>
+
                                     <tbody>
                                         <?php
-                                        // Get items for this order
                                         $items_stmt = $conn->prepare("SELECT * FROM order_items WHERE order_id = ?");
                                         $items_stmt->bind_param("i", $order_id);
                                         $items_stmt->execute();
                                         $items_result = $items_stmt->get_result();
 
-                                        if ($items_result->num_rows > 0) {
-                                            while ($item_row = $items_result->fetch_assoc()) {
-                                                $item_name = $item_row['item_name'];
-                                                $item_description = $item_row['description'];
-                                                $item_img = $item_row['item_image'];
-                                                $item_price = $item_row['price'] - ($item_row['price'] * $item_row['discount'] / 100);
-                                                $item_qty = $item_row['quantity'];
+                                        while ($item_row = $items_result->fetch_assoc()):
+                                            $item_name  = $item_row['item_name'];
+                                            $item_desc  = $item_row['description'];
+                                            $item_img   = $item_row['item_image'];
+                                            $item_qty   = (int) $item_row['quantity'];
+                                            $item_price = $item_row['price'] - ($item_row['price'] * $item_row['discount'] / 100);
                                         ?>
-                                                <tr>
-                                                    <td>
-                                                        <img src="/Restaurant/admin/<?php echo $item_img; ?>" alt="<?php echo $item_name; ?>" class="item-image">
-                                                    </td>
-                                                    <td>
-                                                        <div class="item-name"><?php echo $item_name; ?></div>
-                                                        <div class="item-description"><?php echo $item_description; ?></div>
-                                                    </td>
-                                                    <td class="item-quantity"><?php echo $item_qty; ?></td>
-                                                    <td class="item-price">₹<?php echo $item_price; ?></td>
-                                                </tr>
-                                        <?php
-                                            }
-                                        }
-                                        ?>
+                                            <tr>
+                                                <td>
+                                                    <img
+                                                        src="/Restaurant/admin/<?= htmlspecialchars($item_img, ENT_QUOTES, 'UTF-8') ?>"
+                                                        alt="<?= htmlspecialchars($item_name, ENT_QUOTES, 'UTF-8') ?>"
+                                                        class="item-image"
+                                                    >
+                                                </td>
+
+                                                <td>
+                                                    <div class="item-name">
+                                                        <?= htmlspecialchars($item_name, ENT_QUOTES, 'UTF-8') ?>
+                                                    </div>
+                                                    <div class="item-description">
+                                                        <?= htmlspecialchars($item_desc, ENT_QUOTES, 'UTF-8') ?>
+                                                    </div>
+                                                </td>
+
+                                                <td class="item-quantity"><?= $item_qty ?></td>
+
+                                                <td class="item-price">
+                                                    ₹<?= number_format($item_price, 2) ?>
+                                                </td>
+                                            </tr>
+                                        <?php endwhile; ?>
+
+                                        <?php $items_stmt->close(); ?>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
+
+                        <!-- Actions -->
                         <div class="order-actions">
-                            <a href="order_details.php?order_id=<?php echo $order_id; ?>" class="action-btn btn-outline">
+                            <a href="order_details.php?order_id=<?= $order_id ?>" class="action-btn btn-outline">
                                 <i class="fas fa-eye"></i> View Details
                             </a>
-                            <?php if ($status == "Completed" || $status == "Cancelled") { ?>
+
+                            <?php if ($status === "Completed" || $status === "Cancelled"): ?>
                                 <button class="action-btn btn-primary">
                                     <i class="fas fa-redo"></i> Reorder
                                 </button>
-                            <?php } else if ($status == "Processing") { ?>
+                            <?php elseif ($status === "Processing"): ?>
                                 <button class="action-btn btn-outline">
                                     <i class="fas fa-times"></i> Cancel Order
                                 </button>
-                            <?php } ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
-            <?php
-            }
-        } else {
-            ?>
+
+            <?php endwhile; ?>
+
+        <?php else: ?>
+
+            <!-- Empty state -->
             <div class="order-card">
                 <div class="empty-state">
                     <i class="fas fa-clipboard-list"></i>
                     <h3>No Orders Yet</h3>
-                    <p>You haven't placed any orders yet. Start exploring restaurants to place your first order!</p>
+                    <p>
+                        You haven't placed any orders yet.
+                        Start exploring restaurants to place
+                        your first order!
+                    </p>
                     <a href="restaurant_menu.php">
-                        <button class="action-btn btn-primary">
-                            Order Now
-                        </button>
+                        <button class="action-btn btn-primary">Order Now</button>
                     </a>
                 </div>
             </div>
-        <?php
-        }
-        ?>
+
+        <?php endif; ?>
+
+        <?php $orders_stmt->close(); ?>
     </div>
-    <?php include 'includes/footer_nav.php' ?>
+
+    <?php include 'includes/footer_nav.php'; ?>
+
 </body>
 
 </html>
